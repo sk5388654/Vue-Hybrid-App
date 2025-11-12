@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig(({ mode }) => {
   return {
-    base: mode === 'production' ? '/POS/' : '/', // use / for dev, /POS/ for prod
+    base: mode === 'production' ? '/Hybrid-POS/' : '/', // use / for dev, /POS/ for prod
     plugins: [vue()],
     resolve: {
       alias: {
