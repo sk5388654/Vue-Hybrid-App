@@ -34,17 +34,18 @@ const filtered = computed(() => {
 
     <!-- Product Grid -->
     <div class="flex-1 overflow-y-auto pr-2">
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+      <!-- Responsive columns: mobile 1, sm 2, md 3, lg 4 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 
         <div
           v-for="p in filtered"
           :key="p.id"
-          class="group flex flex-col rounded-lg p-3 dark-panel transition hover:shadow-md"
+          class="group flex flex-col rounded-lg p-3 dark-panel transition hover:shadow-md max-w-full"
         >
           <img
             :src="p.image"
             :alt="p.name"
-            class="h-28 w-full rounded-md object-cover"
+            class="w-full aspect-[3/2] rounded-md object-cover"
           />
 
           <div class="mt-2 flex-1">
@@ -61,7 +62,8 @@ const filtered = computed(() => {
           <button
             :disabled="p.stock === 0 || props.disabled"
             @click="emit('add', p)"
-            class="mt-3 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-slate-100 disabled:bg-gray-700 disabled:cursor-not-allowed"
+            class="mt-3 rounded-md bg-indigo-600 px-3 py-3 sm:py-2 text-sm font-medium text-slate-100 disabled:bg-gray-700 disabled:cursor-not-allowed w-full sm:w-auto"
+            style="min-height:44px"
           >
             Add to Cart
           </button>

@@ -25,7 +25,8 @@
       </div>
     </section>
 
-    <aside class="lg:col-span-1">
+    <!-- Cart shown as right-side panel on large screens; hidden on small so mobile uses bottom drawer -->
+    <aside class="hidden lg:block lg:col-span-1">
       <Cart
         :items="detailedCart"
         :subtotal="subtotal"
@@ -112,6 +113,56 @@
       </div>
     </aside>
   </div>
+
+  <!-- Floating Cart button for mobile (shows on screens smaller than lg) -->
+  <button
+    class="fixed z-40 bottom-20 right-4 inline-flex items-center justify-center rounded-full bg-green-600 text-white p-4 shadow-lg lg:hidden"
+    @click="toggleCart()"
+    aria-controls="mobile-cart"
+    :aria-expanded="cartOpen"
+    title="Toggle cart"
+  >
+    <span class="sr-only">Open cart</span>
+    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4" />
+    </svg>
+    <span class="ml-2 hidden sm:inline">Cart</span>
+  </button>
+
+  <!-- Mobile cart drawer (teleported to body) -->
+  <teleport to="body">
+    <div v-show="cartOpen" class="fixed inset-0 z-50 lg:hidden">
+      <div class="absolute inset-0 bg-black/40" @click="closeCart" aria-hidden="true"></div>
+      <div id="mobile-cart" role="dialog" aria-modal="true" class="absolute left-0 right-0 bottom-0 z-50">
+        <div :class="['transform transition-transform duration-300 bg-white dark:bg-slate-900 rounded-t-lg p-4', cartOpen ? 'translate-y-0' : 'translate-y-full']">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-lg font-semibold">Cart</div>
+            <button @click="closeCart" class="p-2">Close</button>
+          </div>
+          <div class="max-h-[60vh] overflow-auto">
+            <Cart
+              :items="detailedCart"
+              :subtotal="subtotal"
+              :invoiceDiscountMode="invoiceDiscount.mode"
+              :invoiceDiscountValue="invoiceDiscount.value"
+              :invoiceDiscountAmount="invoiceDiscountAmount"
+              :grandTotal="grandTotal"
+              :selectedId="selectedCartItemId"
+              :disabled="!isShiftOpen"
+              @select="onSelectCartItem"
+              @updateQty="updateQuantity"
+              @remove="removeFromCart"
+              @checkout="checkout"
+              @hold="holdSale"
+              @update-item-discount="updateItemDiscount"
+              @updateInvoiceDiscountMode="updateInvoiceDiscountMode"
+              @updateInvoiceDiscountValue="updateInvoiceDiscountValue"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </teleport>
 
   <ReceiptModal
     v-if="isModalOpen"
@@ -201,6 +252,7 @@ import { useCustomersStore } from '@/store/customers'
 import { useClosingVoucherStore } from '@/store/closingVouchers'
 import ProductList from '@/components/ProductList.vue'
 import Cart from '@/components/Cart.vue'
+import { useSidebarToggle } from '@/composables/useSidebarToggle'
 import ReceiptModal from '@/components/ReceiptModal.vue'
 import InvoiceModal from '@/components/InvoiceModal.vue'
 import PaymentSelect from '@/components/PaymentSelect.vue'
@@ -796,6 +848,20 @@ onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   // load suspended sales for this store
   loadSuspended()
+  // ensure cart drawer / mobile controls are initialised
+})
+
+// sidebar/cart toggles for mobile UI
+const { cartOpen, toggleCart, closeCart } = useSidebarToggle()
+
+// helper to close cart when navigating away or on checkout
+function closeMobileCartIfOpen() {
+  if (cartOpen.value) closeCart()
+}
+
+onUnmounted(() => {
+  // ensure we remove any other listeners (onKeydown removed above)
+  if (cartOpen.value) closeCart()
 })
 
 onUnmounted(() => {
