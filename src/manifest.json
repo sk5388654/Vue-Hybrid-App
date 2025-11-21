@@ -2,8 +2,8 @@
     "name": "Omni Starter Vue",
     "short_name": "Omni Starter Vue",
     "description": "Omni Starter Vue",
-    "scope": "/",
-    "start_url": "/",
+    "scope": "/Vue-Hybrid-App/",
+    "start_url": "/Vue-Hybrid-App/",
     "icons": [
         {
             "src": "assets/manifest/android-chrome-192x192.png",
