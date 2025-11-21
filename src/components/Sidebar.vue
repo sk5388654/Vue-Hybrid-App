@@ -181,15 +181,15 @@ onMounted(() => {
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- Theme toggle: visible on large screens only to preserve compact tablet layout -->
+          <!-- Theme toggle: show icon on md (compact) and icon+label on lg -->
           <button
-            class="hidden lg:inline-flex sidebar-toggle"
+            class="hidden md:inline-flex items-center gap-2 sidebar-toggle"
             @click="toggleTheme"
             :title="isDarkMode ? 'Switch to light' : 'Switch to dark'"
             aria-label="Toggle theme"
           >
-            <span v-if="isDarkMode">Dark</span>
-            <span v-else>Light</span>
+            <svg class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="hidden lg:inline text-sm">{{ isDarkMode ? 'Dark' : 'Light' }}</span>
           </button>
         </div>
       </div>
@@ -259,7 +259,7 @@ onMounted(() => {
       <div class="flex items-center justify-center md:flex lg:hidden">
         <button
           class="sidebar-toggle"
-          @click="$router.push('/login'); auth.logout()"
+          @click="$router.push('/login'); auth.logout(); closeSidebar()"
           aria-label="Logout"
           title="Logout"
         >
@@ -275,7 +275,7 @@ onMounted(() => {
       <div v-show="sidebarOpen" class="fixed inset-0 z-50 md:hidden">
         <div class="absolute inset-0 bg-black/40" @click="closeSidebar" aria-hidden="true"></div>
         <aside
-          class="relative z-50 h-full w-4/5 max-w-xs transform transition-transform duration-300 dark-sidebar"
+          class="relative z-50 h-full w-4/5 max-w-xs transform transition-transform duration-300 dark-sidebar pb-6"
           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
           role="dialog"
           id="mobile-sidebar"
@@ -286,22 +286,41 @@ onMounted(() => {
               <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">POS</span>
               <div class="text-lg font-semibold">Shop Suite</div>
             </div>
-            <button class="p-2" @click="closeSidebar" aria-label="Close menu">✕</button>
-          </div>
-          <div class="p-4 overflow-y-auto h-full">
-            <div class="mb-4">
-              <select v-model="currentStoreId" :disabled="!isAdmin" class="w-full rounded-md input-field" @change="closeSidebar">
-                <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
-              </select>
+            <div class="flex items-center gap-2">
+              <!-- Theme toggle in mobile header -->
+              <button class="p-2 sidebar-toggle" @click="toggleTheme" :title="isDarkMode ? 'Switch to light' : 'Switch to dark'" aria-label="Toggle theme">
+                <svg class="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="p-2" @click="closeSidebar" aria-label="Close menu">✕</button>
             </div>
-            <nav class="space-y-2">
-              <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" class="flex items-center gap-3 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800" @click="closeSidebar">
-                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                  <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <span class="text-sm font-medium">{{ item.label }}</span>
-              </RouterLink>
-            </nav>
+          </div>
+
+          <div class="flex flex-col h-full">
+            <div class="p-4 overflow-y-auto flex-1">
+              <div class="mb-4">
+                <select v-model="currentStoreId" :disabled="!isAdmin" class="w-full rounded-md input-field" @change="closeSidebar">
+                  <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <div v-if="isAdmin" class="mt-2 flex gap-2">
+                  <button class="btn-ghost flex-1 py-1 text-xs" @click="showAdd = true; closeSidebar()">Add</button>
+                  <button class="btn-danger flex-1 py-1 text-xs" @click="deleteStore(); closeSidebar()">Delete</button>
+                </div>
+              </div>
+              <nav class="space-y-2">
+                <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" class="flex items-center gap-3 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800" @click="closeSidebar">
+                  <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                    <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <span class="text-sm font-medium">{{ item.label }}</span>
+                </RouterLink>
+              </nav>
+            </div>
+
+            <div class="p-4 border-t">
+              <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
+              <div class="font-semibold mb-2">{{ auth.user?.displayName }}</div>
+              <button class="mt-2 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100 hover:bg-[rgba(255,255,255,0.02)]" @click="$router.push('/login'); auth.logout(); closeSidebar()">Logout</button>
+            </div>
           </div>
         </aside>
       </div>
