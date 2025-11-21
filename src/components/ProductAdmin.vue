@@ -100,7 +100,7 @@ function generateBarcode() {
         <div>
           <div class="subtle-label">Products</div>
           <h2 class="section-heading">
-            {{ editingId == null ? 'Add Product' : 'Edit Product' }}
+            {{ editingId == null ? 'Add Product test' : 'Edit Product' }}
           </h2>
         </div>
 
