@@ -119,6 +119,13 @@ export const useSalesStore = defineStore('sales', {
       this.sales.push(sale)
       this.persist()
       return sale
+    },
+    deleteSale(saleId: string) {
+      const idx = this.sales.findIndex(s => s.id === saleId)
+      if (idx === -1) return false
+      this.sales.splice(idx, 1)
+      this.persist()
+      return true
     }
   }
 })

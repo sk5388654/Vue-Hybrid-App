@@ -17,10 +17,27 @@ onMounted(() => {
 const voucher = computed(() => store.vouchers.find(v => v.id === voucherId))
 const discounts = computed(() => voucher.value?.discounts ?? 0)
 const refunds = computed(() => voucher.value?.refunds ?? 0)
+const refundCount = computed(() => voucher.value?.refundCount ?? 0)
+const refundBreakdown = computed(() => voucher.value?.refundBreakdown ?? {})
 const expenses = computed(() => voucher.value?.expenses ?? 0)
 const expectedCash = computed(() => voucher.value?.expectedClosingCash ?? 0)
 const actualCash = computed(() => voucher.value?.actualClosingCash ?? 0)
 const difference = computed(() => voucher.value?.difference ?? actualCash.value - expectedCash.value)
+
+const refundBreakdownList = computed(() => {
+  const breakdown = refundBreakdown.value as Record<string, { amount: number; count: number }>
+  const keys = Object.keys(breakdown)
+  return keys.map((typeKey) => {
+    const data = breakdown[typeKey] || { amount: 0, count: 0 }
+    const label = typeKey.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+    return {
+      type: typeKey,
+      label,
+      amount: data.amount,
+      count: data.count,
+    }
+  })
+})
 
 const doPrint = () => {
   window.print()
@@ -66,6 +83,10 @@ const doPrint = () => {
           <td class="py-2 text-right text-red-600">Rs {{ refunds.toFixed(2) }}</td>
         </tr>
         <tr>
+          <td class="py-2">Number of Refunds</td>
+          <td class="py-2 text-right">{{ refundCount }}</td>
+        </tr>
+        <tr>
           <td class="py-2">Expenses</td>
           <td class="py-2 text-right text-red-600">Rs {{ expenses.toFixed(2) }}</td>
         </tr>
@@ -88,6 +109,29 @@ const doPrint = () => {
         </tr>
       </tbody>
     </table>
+
+    <hr class="my-4" />
+
+    <div>
+      <h2 class="mb-2 text-sm font-semibold text-gray-700">Refund Breakdown</h2>
+      <div v-if="refundBreakdownList.length === 0" class="text-xs text-gray-500">No refunds recorded.</div>
+      <table v-else class="w-full text-sm">
+        <thead class="bg-gray-100 text-gray-600">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">Type</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Count</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Amount (Rs)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="item in refundBreakdownList" :key="item.type">
+            <td class="px-3 py-2 text-gray-700">{{ item.label }}</td>
+            <td class="px-3 py-2 text-right text-gray-600">{{ item.count }}</td>
+            <td class="px-3 py-2 text-right font-medium text-gray-900">Rs {{ item.amount.toFixed(2) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <hr class="my-4" />
 

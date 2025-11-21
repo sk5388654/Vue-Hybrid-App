@@ -13,12 +13,17 @@ const form = reactive<Omit<Product, 'id'>>({
   barcode: '',
   stock: 0,
 })
+
+const errorMessage = ref('')
 const editingId = ref<number | null>(null)
 
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return store.products
-  return store.products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+  return store.products.filter((p) =>
+    p.name.toLowerCase().includes(q) ||
+    p.barcode.includes(q)
+  )
 })
 
 function resetForm() {
@@ -28,16 +33,41 @@ function resetForm() {
   form.barcode = ''
   ;(form as any).stock = 0
   editingId.value = null
+  errorMessage.value = ''
 }
 
 function save() {
-  if (!form.name || form.price < 0 || (form as any).stock < 0) return
+  errorMessage.value = ''
+
+  const nameOk = !!form.name.trim()
+  const priceOk = form.price > 0
+  const stockVal = Number((form as any).stock ?? 0)
+  const stockOk = stockVal >= 0
+
+  if (!nameOk || !priceOk || !stockOk) {
+    errorMessage.value = 'Please fill in required fields: Name, Price (>0), Quantity (>=0)'
+    return
+  }
+
   if (editingId.value == null) {
     const barcode = form.barcode || String(100000000000 + Math.floor(Math.random() * 900000000000))
-    store.add({ name: form.name, price: form.price, image: form.image, barcode, stock: Number((form as any).stock ?? 0) })
+    store.add({
+      name: form.name.trim(),
+      price: form.price,
+      image: form.image,
+      barcode,
+      stock: stockVal,
+    })
   } else {
-    store.update(editingId.value, { name: form.name, price: form.price, image: form.image, barcode: form.barcode, stock: Number((form as any).stock ?? 0) })
+    store.update(editingId.value, {
+      name: form.name.trim(),
+      price: form.price,
+      image: form.image,
+      barcode: form.barcode,
+      stock: stockVal,
+    })
   }
+
   resetForm()
 }
 
@@ -62,69 +92,158 @@ function generateBarcode() {
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 class="mb-3 text-lg font-semibold text-gray-800">{{ editingId == null ? 'Add Product' : 'Edit Product' }}</h2>
+
+    <!-- Add / Edit Product Form -->
+    <div class="glass-panel space-y-4">
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="subtle-label">Products</div>
+          <h2 class="section-heading">
+            {{ editingId == null ? 'Add Product' : 'Edit Product' }}
+          </h2>
+        </div>
+
+        <div class="flex gap-2">
+          <button v-if="editingId != null" class="btn-ghost" @click="resetForm">
+            Cancel edit
+          </button>
+          <button class="btn-primary text-white" @click="save">
+            {{ editingId == null ? 'Add Product' : 'Save Changes' }}
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="errorMessage"
+        class="rounded-2xl border border-red-300 bg-red-500/20 px-4 py-2 text-sm text-red-200"
+      >
+        {{ errorMessage }}
+      </div>
+
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
         <div>
-          <label class="block text-sm text-gray-700">Name</label>
-          <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+          <label class="subtle-label">Name *</label>
+          <input v-model="form.name" type="text" class="input-field" />
         </div>
+
         <div>
-          <label class="block text-sm text-gray-700">Price</label>
-          <input v-model.number="form.price" type="number" min="0" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+          <label class="subtle-label">Price *</label>
+          <input v-model.number="form.price" type="number" min="0" class="input-field" />
         </div>
+
         <div>
-          <label class="block text-sm text-gray-700">Image URL</label>
-          <input v-model="form.image" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+          <label class="subtle-label">Image URL</label>
+          <input v-model="form.image" type="text" class="input-field" />
         </div>
+
         <div>
-          <label class="block text-sm text-gray-700">Quantity</label>
-          <input v-model.number="(form as any).stock" type="number" min="0" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+          <label class="subtle-label">Quantity *</label>
+          <input
+            v-model.number="(form as any).stock"
+            type="number"
+            min="0"
+            class="input-field"
+          />
         </div>
+
+        <!-- Barcode -->
         <div class="sm:col-span-2">
-          <label class="block text-sm text-gray-700">Barcode</label>
-          <div class="mt-1 flex items-center gap-2">
-            <input v-model="form.barcode" type="text" placeholder="Auto or custom" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-            <button @click="generateBarcode" class="rounded-md border border-gray-300 px-3 py-2 text-sm">Generate</button>
+          <label class="subtle-label">Barcode</label>
+
+          <div class="barcode-field">
+            <input
+              v-model="form.barcode"
+              type="text"
+              class="flex-1"
+              placeholder="Auto or custom"
+            />
+            <button @click="generateBarcode" class="btn-ghost text-xs">Generate</button>
           </div>
-          <div v-if="form.barcode" class="mt-3">
+
+          <div v-if="form.barcode" class="mt-3 barcode-wrapper p-3 rounded-xl">
             <BarcodeDisplay :value="form.barcode" />
           </div>
         </div>
-      </div>
-      <div class="mt-4 flex gap-2">
-        <button @click="save" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white">
-          {{ editingId == null ? 'Add Product' : 'Save Changes' }}
-        </button>
-        <button @click="resetForm" class="rounded-md border border-gray-300 px-4 py-2 text-sm">Clear</button>
+
       </div>
     </div>
 
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">Products</h2>
-        <input v-model="query" type="text" placeholder="Search by name or barcode" class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+    <!-- Product Inventory List -->
+    <div class="glass-panel">
+      <div class="mb-5 flex flex-wrap items-center gap-3">
+        <div>
+          <div class="subtle-label">Inventory</div>
+          <h2 class="section-heading">Products</h2>
+        </div>
+
+        <input
+          v-model="query"
+          type="search"
+          class="input-field max-w-xs"
+          placeholder="Search by name or barcode"
+        />
       </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div v-for="p in filtered" :key="p.id" class="rounded-lg border border-gray-100 p-3 shadow-sm">
-          <img :src="p.image" :alt="p.name" class="h-24 w-full rounded object-cover" />
-          <div class="mt-2">
-            <div class="text-sm font-medium text-gray-900">{{ p.name }}</div>
-            <div class="text-xs text-gray-600">₹{{ p.price }} • Quantity: {{ p.stock }}</div>
-            <div class="mt-2">
-              <BarcodeDisplay :value="p.barcode" />
+
+      <div
+        class="max-h-[600px] overflow-y-auto rounded-2xl border border-slate-700 dark:border-slate-800"
+      >
+        <div class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+
+          <div
+            v-for="p in filtered"
+            :key="p.id"
+            class="rounded-2xl border border-slate-700 dark-panel p-4 shadow-sm transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-lg"
+          >
+            <img
+              :src="p.image"
+              :alt="p.name"
+              class="h-24 w-full rounded-xl object-cover"
+            />
+
+            <div class="mt-3">
+
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-slate-100">{{ p.name }}</div>
+                  <div class="text-xs text-slate-400">SKU {{ p.barcode }}</div>
+                </div>
+
+                <span
+                  class="pill-badge border rounded-xl px-2 py-1 text-xs"
+                  :class="p.stock > 0 ?
+                    'text-green-500 border-green-600' :
+                    'text-red-500 border-red-600'"
+                >
+                  {{ p.stock > 0 ? p.stock + ' qty' : 'Out' }}
+                </span>
+              </div>
+
+              <div class="mt-3 text-lg font-bold text-slate-100">
+                ₹{{ p.price }}
+              </div>
+
+              <div class="mt-3 barcode-wrapper p-2 rounded-xl">
+                <BarcodeDisplay :value="p.barcode" />
+              </div>
+
             </div>
+
+            <div class="mt-4 flex gap-2">
+              <button @click="edit(p)" class="btn-ghost flex-1 text-xs">Edit</button>
+              <button @click="remove(p.id)" class="btn-danger flex-1 text-xs">Delete</button>
+            </div>
+
           </div>
-          <div class="mt-3 flex gap-2">
-            <button @click="edit(p)" class="rounded-md border border-gray-300 px-3 py-1 text-xs">Edit</button>
-            <button @click="remove(p.id)" class="rounded-md border border-red-300 bg-red-50 px-3 py-1 text-xs text-red-700">Delete</button>
-          </div>
+
         </div>
       </div>
+
     </div>
+
   </div>
 </template>
 
 <style scoped>
 </style>
-

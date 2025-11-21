@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useSalesStore } from './sales'
 import { useExpensesStore } from './expenses'
+import { useRefundsStore, type RefundType } from './refunds'
 import { useStoresStore } from './stores'
 
 export type PaymentBreakdown = {
@@ -20,6 +21,8 @@ export type ClosingVoucher = {
   paymentBreakdown: PaymentBreakdown[]
   discounts: number
   refunds: number
+  refundCount: number
+  refundBreakdown: Record<RefundType, { amount: number; count: number }>
   expenses: number
   expectedClosingCash: number
   actualClosingCash: number
@@ -127,6 +130,7 @@ export const useClosingVoucherStore = defineStore('closingVouchers', {
     }) {
       const salesStore = useSalesStore()
       const expensesStore = useExpensesStore()
+      const refundsStore = useRefundsStore()
 
       const startTime = new Date(shiftStart).getTime()
       const endTime = new Date(shiftEnd).getTime()
@@ -151,6 +155,19 @@ export const useClosingVoucherStore = defineStore('closingVouchers', {
         discounts += Math.max(0, gross - sale.total)
       })
 
+      const refundsInRange = refundsStore.refundsForCurrentStore.filter(ref => {
+        const when = new Date(ref.createdAt).getTime()
+        return when >= startTime && when <= endTime
+      })
+      const refundsTotal = refundsInRange.reduce((sum, ref) => sum + ref.totalRefund, 0)
+      const refundBreakdown = refundsInRange.reduce((acc, ref) => {
+        const entry = acc[ref.refundType] || { amount: 0, count: 0 }
+        entry.amount += ref.totalRefund
+        entry.count += 1
+        acc[ref.refundType] = entry
+        return acc
+      }, {} as Record<RefundType, { amount: number; count: number }>)
+
       const expenses = expensesStore.expensesForCurrentStore
         .filter(exp => {
           const when = new Date(exp.date).getTime()
@@ -160,13 +177,15 @@ export const useClosingVoucherStore = defineStore('closingVouchers', {
 
       const payments = Array.from(paymentBreakdown.entries()).map(([method, amount]) => ({ method, amount }))
       const cashSales = payments.find(p => p.method === 'cash')?.amount || 0
-      const expectedClosingCash = openingCash + cashSales - refunds - expenses
+      const expectedClosingCash = openingCash + cashSales - refundsTotal - expenses
 
       return {
         totalSales,
         paymentBreakdown: payments,
         discounts,
-        refunds,
+        refunds: refundsTotal,
+        refundCount: refundsInRange.length,
+        refundBreakdown,
         expenses,
         expectedClosingCash,
       }
@@ -203,6 +222,8 @@ export const useClosingVoucherStore = defineStore('closingVouchers', {
         paymentBreakdown: snapshot.paymentBreakdown,
         discounts: snapshot.discounts,
         refunds: snapshot.refunds,
+        refundCount: snapshot.refundCount,
+        refundBreakdown: snapshot.refundBreakdown,
         expenses: snapshot.expenses,
         expectedClosingCash: snapshot.expectedClosingCash,
         actualClosingCash,
@@ -216,6 +237,13 @@ export const useClosingVoucherStore = defineStore('closingVouchers', {
       this.activeShift = null
       this.persistShift()
       return voucher
+    },
+    deleteVoucher(voucherId: string) {
+      const idx = this.vouchers.findIndex(v => v.id === voucherId)
+      if (idx === -1) return false
+      this.vouchers.splice(idx, 1)
+      this.persistVouchers()
+      return true
     },
     setCurrentStore() {
       this.load()

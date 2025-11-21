@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useAuthStore } from '@/store/auth'
 import { useSuppliersStore, type Supplier, type PaymentTerms } from '@/store/suppliers'
 import { useProductsStore } from '@/store/products'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
 import SupplierPaymentForm from './SupplierPaymentForm.vue'
 
 const suppliersStore = useSuppliersStore()
+const auth = useAuthStore()
 const productsStore = useProductsStore()
 
 const categories: PaymentTerms[] = ['Net 15', 'Net 30', 'Net 45', 'Cash on Delivery', 'Prepaid']
@@ -126,59 +128,59 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 class="mb-3 text-lg font-semibold text-gray-800">
-        {{ editingId == null ? 'Add Supplier' : 'Edit Supplier' }}
-      </h2>
-      <div v-if="errorMessage" class="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">
-        {{ errorMessage }}
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div v-if="auth.isAdmin" class="rounded-lg border border-transparent p-4 dark-panel">
+        <h2 class="mb-3 text-lg font-semibold text-slate-100">
+          {{ editingId == null ? 'Add Supplier' : 'Edit Supplier' }}
+        </h2>
+        <div v-if="errorMessage" class="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">
+          {{ errorMessage }}
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label class="block text-sm text-gray-700">Supplier Name <span class="text-red-500">*</span></label>
+          <label class="block text-sm form-label">Supplier Name <span class="text-red-500">*</span></label>
           <input
             v-model="form.supplierName"
             type="text"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="mt-1 w-full rounded-md input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Contact Person <span class="text-red-500">*</span></label>
+          <label class="block text-sm form-label">Contact Person <span class="text-red-500">*</span></label>
           <input
             v-model="form.contactPerson"
             type="text"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="mt-1 w-full rounded-md input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Phone <span class="text-red-500">*</span></label>
+          <label class="block text-sm form-label">Phone <span class="text-red-500">*</span></label>
           <input
             v-model="form.phone"
             type="tel"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="mt-1 w-full rounded-md input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Email <span class="text-red-500">*</span></label>
+          <label class="block text-sm form-label">Email <span class="text-red-500">*</span></label>
           <input
             v-model="form.email"
             type="email"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="mt-1 w-full rounded-md input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Address</label>
+          <label class="block text-sm form-label">Address</label>
           <input
             v-model="form.address"
             type="text"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="mt-1 w-full rounded-md input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Payment Terms</label>
+          <label class="block text-sm form-label">Payment Terms</label>
           <select
             v-model="form.paymentTerms"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="mt-1 w-full rounded-md input-field"
           >
             <option v-for="term in categories" :key="term" :value="term">{{ term }}</option>
           </select>
@@ -188,9 +190,9 @@ onMounted(() => {
             v-model="form.preferred"
             type="checkbox"
             id="preferred"
-            class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            class="h-4 w-4 rounded form-checkbox text-indigo-600 focus:ring-indigo-500"
           />
-          <label for="preferred" class="text-sm text-gray-700">Preferred Supplier</label>
+          <label for="preferred" class="text-sm form-label">Preferred Supplier</label>
         </div>
       </div>
       <div class="mt-4 flex gap-2">
@@ -200,67 +202,71 @@ onMounted(() => {
         >
           {{ editingId == null ? 'Add Supplier' : 'Save Changes' }}
         </button>
-        <button @click="resetForm" class="rounded-md border border-gray-300 px-4 py-2 text-sm">Clear</button>
+        <button @click="resetForm" class="rounded-md border border-[rgba(255,255,255,0.06)] px-4 py-2 text-sm">Clear</button>
       </div>
     </div>
 
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="rounded-lg border border-transparent p-4 dark-panel">
       <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">Suppliers ({{ filtered.length }})</h2>
+        <h2 class="text-lg font-semibold form-label">Suppliers ({{ filtered.length }})</h2>
         <input
           v-model="query"
           type="text"
           placeholder="Search suppliers..."
-          class="w-64 rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          class="w-64 rounded-md input-field"
         />
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="bg-gray-50">
+          <thead class="dark-panel">
             <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Name</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Contact</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Phone</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Email</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Payment Terms</th>
-              <th class="px-4 py-2 text-center text-xs font-medium text-gray-700">Actions</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-200">Name</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-200">Contact</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-200">Phone</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-200">Email</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-slate-200">Payment Terms</th>
+              <th class="px-4 py-2 text-center text-xs font-medium text-slate-200">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-if="filtered.length === 0" class="text-center text-gray-500">
+            <tr v-if="filtered.length === 0" class="text-center table-text">
               <td colspan="6" class="px-4 py-8">No suppliers found</td>
             </tr>
-            <tr v-for="supplier in filtered" :key="supplier.id" class="hover:bg-gray-50">
+            <tr v-for="supplier in filtered" :key="supplier.id" class="hover:dark-panel">
               <td class="px-4 py-2">
-                <div class="font-medium text-gray-900">{{ supplier.supplierName }}</div>
+                <div class="font-medium table-text">{{ supplier.supplierName }}</div>
                 <div v-if="supplier.preferred" class="text-xs text-indigo-600">⭐ Preferred</div>
               </td>
-              <td class="px-4 py-2 text-gray-700">{{ supplier.contactPerson }}</td>
-              <td class="px-4 py-2 text-gray-700">{{ supplier.phone }}</td>
-              <td class="px-4 py-2 text-gray-600">{{ supplier.email }}</td>
-              <td class="px-4 py-2 text-gray-600">{{ supplier.paymentTerms }}</td>
+              <td class="px-4 py-2 table-text">{{ supplier.contactPerson }}</td>
+              <td class="px-4 py-2 table-text">{{ supplier.phone }}</td>
+              <td class="px-4 py-2 table-text">{{ supplier.email }}</td>
+              <td class="px-4 py-2 table-text">{{ supplier.paymentTerms }}</td>
               <td class="px-4 py-2">
                 <div class="flex justify-center gap-1">
                   <button
+                    v-if="auth.isAdmin"
                     @click="edit(supplier)"
-                    class="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+                    class="rounded-md border border-[rgba(255,255,255,0.06)] px-2 py-1 text-xs hover:dark-panel"
                   >
                     Edit
                   </button>
                   <button
+                    v-if="auth.isAdmin"
                     @click="openPOForm(supplier.id)"
                     class="rounded-md border border-blue-300 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
                   >
                     PO
                   </button>
                   <button
+                    v-if="auth.isAdmin"
                     @click="openPaymentForm(supplier.id)"
                     class="rounded-md border border-green-300 bg-green-50 px-2 py-1 text-xs text-green-700 hover:bg-green-100"
                   >
                     Pay
                   </button>
                   <button
+                    v-if="auth.isAdmin"
                     @click="remove(supplier.id)"
                     class="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
                   >
@@ -276,7 +282,7 @@ onMounted(() => {
 
     <!-- Purchase Order Modal -->
     <div v-if="showPOForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
+      <div class="w-full max-w-2xl rounded-lg dark-panel p-6">
         <h3 class="mb-4 text-lg font-semibold">Create Purchase Order</h3>
         <PurchaseOrderForm
           :supplier-id="selectedSupplierId!"
@@ -288,7 +294,7 @@ onMounted(() => {
 
     <!-- Payment Modal -->
     <div v-if="showPaymentForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+      <div class="w-full max-w-md rounded-lg dark-panel p-6">
         <h3 class="mb-4 text-lg font-semibold">Record Payment</h3>
         <SupplierPaymentForm
           :supplier-id="selectedSupplierId!"

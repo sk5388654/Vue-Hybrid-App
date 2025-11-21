@@ -117,169 +117,112 @@ function clearFilters() {
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 class="mb-3 text-lg font-semibold text-gray-800">
+    <div class="glass-panel space-y-4">
+      <h2 class="section-heading">
         {{ editingId == null ? 'Add Expense' : 'Edit Expense' }}
       </h2>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label class="block text-sm text-gray-700">Expense Title <span class="text-red-500">*</span></label>
-          <input
-            v-model="form.expenseTitle"
-            type="text"
-            placeholder="e.g. Electricity Bill"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
+          <label class="subtle-label">Expense Title *</label>
+          <input v-model="form.expenseTitle" type="text" class="input-field" placeholder="e.g. Electricity bill" />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Category <span class="text-red-500">*</span></label>
-          <select
-            v-model="form.expenseCategory"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          >
+          <label class="subtle-label">Category *</label>
+          <select v-model="form.expenseCategory" class="input-field">
             <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Amount <span class="text-red-500">*</span></label>
-          <input
-            v-model.number="form.amount"
-            type="number"
-            min="0.01"
-            step="0.01"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
+          <label class="subtle-label">Amount *</label>
+          <input v-model.number="form.amount" type="number" min="0.01" step="0.01" class="input-field" />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Date <span class="text-red-500">*</span></label>
-          <input
-            v-model="form.date"
-            type="date"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
+          <label class="subtle-label">Date *</label>
+          <input v-model="form.date" type="date" class="input-field" />
         </div>
         <div class="sm:col-span-2">
-          <label class="block text-sm text-gray-700">Notes (Optional)</label>
-          <textarea
-            v-model="form.notes"
-            rows="2"
-            placeholder="Additional details..."
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          ></textarea>
+          <label class="subtle-label">Notes</label>
+          <textarea v-model="form.notes" rows="2" placeholder="Additional details..." class="text-area-field"></textarea>
         </div>
       </div>
-      <div class="mt-4 flex gap-2">
-        <button
-          @click="save"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
+      <div class="flex gap-2">
+        <button @click="save" class="btn-primary text-white">
           {{ editingId == null ? 'Add Expense' : 'Save Changes' }}
         </button>
-        <button @click="resetForm" class="rounded-md border border-gray-300 px-4 py-2 text-sm">Clear</button>
+        <button @click="resetForm" class="btn-ghost">Clear</button>
       </div>
     </div>
 
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div class="mb-4 flex flex-wrap items-center gap-3">
-        <h2 class="text-lg font-semibold text-gray-800">Expense History</h2>
-        <div class="ml-auto flex flex-wrap gap-2">
-          <input
-            v-model="query"
-            type="text"
-            placeholder="Search..."
-            class="w-48 rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-          <select
-            v-model="filterCategory"
-            class="rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          >
-            <option value="All">All Categories</option>
+    <div class="glass-panel space-y-5">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <h2 class="section-heading">Expense History</h2>
+        <div class="flex items-center gap-2">
+          <select v-model="filterCategory" class="input-field w-28 text-xs">
+            <option value="All">All</option>
             <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
           </select>
-          <input
-            v-model="filterDateFrom"
-            type="date"
-            placeholder="From"
-            class="rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-          <input
-            v-model="filterDateTo"
-            type="date"
-            placeholder="To"
-            class="rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-          <button
-            @click="clearFilters"
-            class="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
-          >
-            Clear Filters
-          </button>
+          <input v-model="filterDateFrom" type="date" class="input-field w-24 text-xs" />
+          <input v-model="filterDateTo" type="date" class="input-field w-24 text-xs" />
+          <button @click="clearFilters" class="btn-ghost text-xs px-2">Reset</button>
+          <input v-model="query" type="search" placeholder="Search..." class="input-field w-32 ml-4 text-xs" style="margin-left:auto;" />
         </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Date</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Title</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Category</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-700">Amount</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Added By</th>
-              <th class="px-4 py-2 text-center text-xs font-medium text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-if="filtered.length === 0" class="text-center text-gray-500">
-              <td colspan="6" class="px-4 py-8">No expenses found</td>
-            </tr>
-            <tr v-for="expense in filtered" :key="expense.id" class="hover:bg-gray-50">
-              <td class="px-4 py-2 text-gray-700">{{ new Date(expense.date).toLocaleDateString() }}</td>
-              <td class="px-4 py-2 font-medium text-gray-900">{{ expense.expenseTitle }}</td>
-              <td class="px-4 py-2">
-                <span
-                  class="inline-flex rounded-full px-2 py-1 text-xs font-medium"
-                  :class="{
-                    'bg-blue-100 text-blue-800': expense.expenseCategory === 'Rent',
-                    'bg-green-100 text-green-800': expense.expenseCategory === 'Supplies',
-                    'bg-yellow-100 text-yellow-800': expense.expenseCategory === 'Utilities',
-                    'bg-purple-100 text-purple-800': expense.expenseCategory === 'Salary',
-                    'bg-gray-100 text-gray-800': expense.expenseCategory === 'Misc',
-                  }"
-                >
-                  {{ expense.expenseCategory }}
-                </span>
-              </td>
-              <td class="px-4 py-2 text-right font-semibold text-red-600">₹{{ expense.amount.toFixed(2) }}</td>
-              <td class="px-4 py-2 text-gray-600">{{ expense.addedBy }}</td>
-              <td class="px-4 py-2 text-center">
-                <div class="flex justify-center gap-2">
-                  <button
-                    @click="edit(expense)"
-                    class="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+      <div class="overflow-hidden rounded-2xl border border-slate-100">
+        <div class="max-h-[520px] overflow-auto">
+          <table class="table-modern">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th class="text-right">Amount</th>
+                <th>Added By</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filtered.length === 0">
+                <td colspan="6" class="text-center text-slate-400">No expenses found</td>
+              </tr>
+              <tr v-for="expense in filtered" :key="expense.id">
+                <td>{{ new Date(expense.date).toLocaleDateString() }}</td>
+                <td class="font-semibold text-slate-900">{{ expense.expenseTitle }}</td>
+                <td>
+                  <span
+                    class="pill-badge"
+                    :class="{
+                      'text-blue-600 border-blue-100': expense.expenseCategory === 'Rent',
+                      'text-green-600 border-green-100': expense.expenseCategory === 'Supplies',
+                      'text-amber-600 border-amber-100': expense.expenseCategory === 'Utilities',
+                      'text-purple-600 border-purple-100': expense.expenseCategory === 'Salary',
+                      'text-slate-600 border-slate-200': expense.expenseCategory === 'Misc',
+                    }"
                   >
-                    Edit
-                  </button>
-                  <button
-                    @click="remove(expense.id)"
-                    class="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-          <tfoot v-if="filtered.length > 0" class="bg-gray-50">
-            <tr>
-              <td colspan="3" class="px-4 py-2 text-right font-semibold text-gray-700">Total:</td>
-              <td class="px-4 py-2 text-right font-bold text-red-600">
-                ₹{{ filtered.reduce((sum, e) => sum + e.amount, 0).toFixed(2) }}
-              </td>
-              <td colspan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
+                    {{ expense.expenseCategory }}
+                  </span>
+                </td>
+                <td class="text-right font-semibold text-red-500">₹{{ expense.amount.toFixed(2) }}</td>
+                <td>{{ expense.addedBy }}</td>
+                <td class="text-center">
+                  <div class="inline-flex gap-2">
+                    <button @click="edit(expense)" class="btn-ghost text-xs px-3 py-1">Edit</button>
+                    <button @click="remove(expense.id)" class="btn-danger text-xs px-3 py-1">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot v-if="filtered.length">
+              <tr>
+                <td colspan="3" class="text-right font-semibold text-slate-600">Total</td>
+                <td class="text-right text-lg font-bold text-red-500">
+                  ₹{{ filtered.reduce((sum, e) => sum + e.amount, 0).toFixed(2) }}
+                </td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
   </div>

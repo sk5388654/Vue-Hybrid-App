@@ -65,7 +65,8 @@ export const useAuthStore = defineStore('auth', {
         if (!stores.stores.length) stores.load()
         const matched = stores.stores.find(s => s.credentials?.username === username && s.credentials?.password === password)
         if (matched) {
-          this.user = { username, role: 'Cashier', displayName: matched.name }
+          // treat store credential logins as Manager so they get Product/Expenses access
+          this.user = { username, role: 'Manager', displayName: matched.name }
           stores.setCurrentStore(matched.id)
           this.persist()
           return true

@@ -1,3 +1,618 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --surface: 252 33% 99%;
+    --card: 0 0% 100%;
+    --border: 220 18% 85%;
+    --muted: 215 16% 47%;
+    --brand: 221 83% 53%;
+    --brand-dark: 221 63% 42%;
+    --brand-soft: 219 87% 96%;
+    --accent: 166 71% 41%;
+    --danger: 0 74% 55%;
+    /* Light theme semantic variables */
+    --bg-app: hsl(252 33% 98%); /* soft off-white */
+    --panel: rgba(255,255,255,0.92); /* cards/panels */
+    --input: #FFFFFF;
+    --border-color: rgba(15,23,42,0.10); /* slightly stronger border for light mode */
+    --sidebar-gradient: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 50%, #f5e6ff 100%); /* soft blue -> lavender */
+    --text-primary: #0f172a;
+    /* darker icon color for sidebar in light mode */
+    --sidebar-icon-color: #071421;
+    --text-secondary: #475569;
+    --card-shadow: 0 8px 24px rgba(15,23,42,0.04);
+    /* barcode background: white in light, black variant in dark */
+    --barcode-bg: #ffffff;
+    color-scheme: light;
+  }
+
+  :root.dark {
+    /* Semantic dark theme variables (strict palette) */
+    --bg-app: #0F172A; /* main app background */
+    --panel: #1E293B; /* panels/cards/modals */
+    --sidebar: #162033; /* sidebar background */
+    --input: #1C263A; /* input fields */
+    --row: #1B2536; /* table rows */
+    --hover-bg: #243044; /* hover background */
+    --text-primary: #E2E8F0; /* primary text */
+    --text-secondary: #94A3B8; /* secondary text */
+    --text-muted: #64748B; /* muted labels */
+    --border-color: rgba(255,255,255,0.06); /* subtle border */
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    --barcode-bg: #000000;
+    --brand: 221 83% 53%;
+    --danger: 0 84% 65%;
+    color-scheme: dark;
+  }
+
+  * {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    @apply antialiased;
+  }
+
+  body {
+    @apply transition-colors;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  :root.dark body {
+    background: var(--bg-app);
+    color: var(--text-primary);
+  }
+
+  ::selection {
+    background-color: hsla(var(--brand), 0.15);
+    color: hsl(var(--brand-dark));
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-transparent text-slate-900;
+  }
+
+  :root.dark .app-shell {
+    color: var(--text-primary);
+  }
+
+  .glass-panel {
+    @apply rounded-3xl p-5 transition-colors;
+    border: 1px solid var(--border-color);
+    background: var(--panel);
+    box-shadow: var(--card-shadow);
+  }
+
+  :root.dark .glass-panel {
+    border: 1px solid var(--border-color);
+    background: var(--panel);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+  }
+
+  .section-heading {
+    @apply text-lg font-semibold text-slate-900 tracking-tight;
+  }
+
+  :root.dark .section-heading {
+    color: var(--text-primary);
+  }
+
+  .subtle-label {
+    @apply text-xs uppercase tracking-wide text-slate-500 font-medium;
+  }
+
+  :root.dark .subtle-label {
+    color: var(--text-secondary);
+  }
+
+  .input-field {
+    @apply w-full rounded-full px-4 py-2 text-sm transition;
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    outline: none;
+  
+    /* keep focus styles similar to previous design */
+    box-shadow: none;
+  }
+
+  /* simple focus ring for accessibility (non-nested to avoid PostCSS nesting issues) */
+  .input-field:focus {
+    border-color: rgba(37,99,235,0.6);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
+  }
+
+  :root.dark .input-field {
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+  }
+  :root.dark .input-field::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .text-area-field {
+    @apply w-full rounded-2xl px-4 py-3 text-sm transition;
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+  }
+
+  .text-area-field:focus {
+    border-color: rgba(37,99,235,0.6);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.06);
+  }
+
+  :root.dark .text-area-field {
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn;
+    background: #2563EB; /* blue-600 */
+    color: var(--text-primary);
+  }
+
+  .btn-primary:hover { background: #1D4ED8; }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  .btn-danger {
+    @apply btn;
+    background: #DC2626; /* red-600 */
+    color: var(--text-primary);
+  }
+
+  .btn-danger:hover { background: #EF4444; }
+
+  .pill-badge {
+    @apply inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600;
+  }
+
+  :root.dark .pill-badge {
+    border: 1px solid var(--border-color);
+    background: var(--panel);
+    color: var(--text-primary);
+  }
+
+  .quick-filter {
+    @apply inline-flex items-center gap-1 rounded-full border border-transparent bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white;
+  }
+
+  :root.dark .quick-filter {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+  }
+
+  :root.dark .quick-filter:hover {
+    background: rgba(59,130,246,0.06);
+  }
+
+  .table-modern {
+    @apply w-full border-separate border-spacing-0 text-sm;
+  }
+
+  .table-modern thead th {
+    @apply sticky top-0 bg-white/95 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  :root.dark .table-modern thead th {
+    background: var(--panel);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .table-modern tbody tr {
+    @apply border-b border-slate-100 transition hover:bg-slate-50/70;
+  }
+
+  :root.dark .table-modern tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    background: transparent;
+  }
+
+  :root.dark .table-modern tbody tr:hover {
+    background: var(--row);
+  }
+
+  .table-modern tbody td {
+    @apply px-4 py-3 align-middle text-slate-700;
+  }
+
+  :root.dark .table-modern tbody td {
+    color: var(--text-primary);
+  }
+
+  .card-grid {
+    @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .sticky-panel {
+    @apply sticky top-0 z-10 bg-white/90 p-4 backdrop-blur;
+  }
+
+  :root.dark .sticky-panel {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* Sidebar helper */
+  /* Provide sensible light-mode defaults for components that use "dark-*" classes
+     (many components use these class names unconditionally). These rules
+     ensure they render correctly in light mode and remain overridden by
+     :root.dark rules when dark theme is active. */
+  .dark-sidebar {
+    /* Use a soft gradient in light mode for a pleasant visual */
+    background: var(--sidebar-gradient);
+    border-right: 1px solid rgba(15,23,42,0.14); /* darker, more visible */
+    color: var(--text-secondary);
+    box-shadow: inset -1px 0 0 rgba(15,23,42,0.03);
+  }
+
+  /* Preserve a solid sidebar background when the dark theme is active */
+  :root.dark .dark-sidebar {
+    background: var(--sidebar);
+  }
+
+  .dark-sidebar .menu-item {
+    /* Make icons and labels more visible in light mode */
+    color: var(--text-primary);
+    font-weight: 600;
+    transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+  }
+
+  .dark-sidebar .menu-item svg {
+    opacity: 1;
+    stroke-width: 1.8;
+    /* Use the darker icon color for stroke/fill so icons appear stronger */
+    stroke: var(--sidebar-icon-color);
+    fill: var(--sidebar-icon-color);
+  }
+
+  /* Stronger hover/active states in light mode for better affordance */
+  .dark-sidebar .menu-item:hover {
+    background: rgba(37,99,235,0.08);
+    color: var(--text-primary);
+  }
+
+  .dark-sidebar .menu-item.active {
+    background: rgba(37,99,235,0.10);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px rgba(37,99,235,0.06);
+  }
+
+  /* Sidebar toggle/button used for collapse and theme controls */
+  .sidebar-toggle {
+    border-radius: 0.75rem;
+    padding: 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.12s ease, color 0.12s ease, transform 0.12s ease;
+    color: var(--text-secondary);
+    /* Light mode: subtle dark tint so it reads on light backgrounds */
+    background: rgba(15,23,42,0.04);
+    border: 1px solid rgba(15,23,42,0.04);
+  }
+
+  .sidebar-toggle:hover {
+    background: rgba(15,23,42,0.08);
+    border-color: rgba(15,23,42,0.08);
+    color: var(--text-primary);
+  }
+
+  /* Disabled state for sidebar toggles (collapsed controls) */
+  .sidebar-toggle[disabled], .sidebar-toggle[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(0.08);
+  }
+
+  :root.dark .sidebar-toggle {
+    /* Dark mode: subtle white tint */
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+  }
+
+  :root.dark .sidebar-toggle:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.08);
+    color: var(--text-primary);
+  }
+
+  :root.dark .sidebar-toggle[disabled], :root.dark .sidebar-toggle[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(0.08);
+  }
+
+  /* Keep subtler text color and original hover/active in dark mode */
+  :root.dark .dark-sidebar .menu-item {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* In dark mode revert sidebar icons to a lighter secondary color */
+  :root.dark .dark-sidebar .menu-item svg {
+    stroke: var(--text-secondary);
+    fill: var(--text-secondary);
+  }
+
+  :root.dark .dark-sidebar .menu-item:hover {
+    background: rgba(59,130,246,0.10);
+    color: var(--text-secondary);
+  }
+
+  :root.dark .dark-sidebar .menu-item.active {
+    background: rgba(59,130,246,0.20);
+    color: var(--text-primary);
+  }
+
+  :root.dark .dark-panel {
+    background: var(--panel);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+  }
+
+  /* Light-mode defaults for dark-panel so its internal text (which often uses
+     utility classes like `text-slate-100`) remains readable on light theme. */
+  .dark-panel {
+    background: var(--panel);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+  }
+
+  /* Transparent panel variant for light mode; preserves panel appearance in dark mode */
+  .transparent-panel {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+    color: var(--text-primary);
+  }
+
+  /* Payment control label and button colors (theme-aware) */
+  .payment-label {
+    color: var(--text-primary);
+  }
+
+  .payment-btn {
+    color: var(--text-primary);
+  }
+
+  /* Generic form label and checkbox styling to be theme-aware */
+  .form-label {
+    color: var(--text-primary);
+  }
+
+  .form-checkbox {
+    border: 1px solid var(--border-color);
+  }
+
+  /* Table/body text that should follow theme primary color */
+  .table-text {
+    color: var(--text-primary);
+  }
+
+  :root.dark .transparent-panel {
+    background: var(--panel);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+  }
+
+  /* Utility overrides inside dark-panel for components that use Tailwind text
+     utility classes intended for dark backgrounds. We map those to semantic
+     light-mode colors so they are readable. */
+  .dark-panel .text-slate-100 { color: var(--text-primary) !important; }
+  .dark-panel .text-slate-300 { color: var(--text-secondary) !important; }
+  .dark-panel .text-slate-400 { color: var(--text-secondary) !important; }
+  /* Make slightly lighter slate utilities readable in light-mode panels */
+  .dark-panel .text-slate-200 { color: var(--text-primary) !important; }
+  .dark-panel .text-slate-500 { color: var(--text-secondary) !important; }
+
+    /* Ensure buttons with dark backgrounds keep white text in light mode. Many
+      components use utility classes like `bg-indigo-600` or `bg-green-600` on
+      buttons; the `.text-slate-100` override above made those texts dark. This
+      rule restores white text for those button backgrounds inside panels. */
+    .dark-panel .bg-indigo-600,
+    .dark-panel .bg-green-600,
+    .dark-panel .bg-indigo-700,
+    .dark-panel .bg-green-700 {
+     color: #ffffff !important;
+    }
+
+  .view-card {
+    @apply glass-panel;
+  }
+
+  /* Ensure common slate utility classes used inside view cards are readable */
+  .view-card .text-slate-100 { color: var(--text-primary) !important; }
+  .view-card .text-slate-200 { color: var(--text-primary) !important; }
+  .view-card .text-slate-300 { color: var(--text-secondary) !important; }
+  .view-card .text-slate-400 { color: var(--text-secondary) !important; }
+  .view-card .text-slate-500 { color: var(--text-secondary) !important; }
+
+  .view-layout {
+    @apply space-y-6;
+  }
+
+  .view-card input[type='text'],
+  .view-card input[type='number'],
+  .view-card input[type='search'],
+  .view-card input[type='date'],
+  .view-card select {
+    width: 100%;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* Apply similar readable input styles for panels that use "glass-panel"
+     (many pages use `glass-panel` directly rather than `view-card`). This
+     ensures exchange inputs and refund fields are visible in light mode. */
+  .glass-panel input[type='text'],
+  .glass-panel input[type='number'],
+  .glass-panel input[type='search'],
+  .glass-panel input[type='date'],
+  .glass-panel select,
+  .glass-panel textarea {
+    width: 100%;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* Barcode field styling: parent container and input inherit theme-aware colors */
+  .barcode-field {
+    @apply mt-1 flex items-center gap-2 rounded-2xl px-3 py-2;
+    background: var(--barcode-bg);
+    /* remove inner border to avoid double-border appearance; rely on parent panel border */
+    border: none;
+    color: var(--text-primary);
+  }
+
+  .barcode-field input {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    outline: none;
+  }
+
+  :root.dark .barcode-field {
+    background: var(--barcode-bg);
+    color: var(--text-primary);
+  }
+
+  /* Barcode wrapper used for product cards and form preview. Remove inner borders
+     and ensure the barcode SVG area is visible with correct background and sizing. */
+  .barcode-wrapper {
+    background: transparent;
+    border: none !important; /* remove inner border */
+    padding: 0.25rem;
+  }
+
+  .barcode-svg {
+    display: block;
+    width: 100%;
+    height: 70px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--barcode-bg);
+  }
+
+  .barcode-svg svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .glass-panel input[type='text']:focus,
+  .glass-panel input[type='number']:focus,
+  .glass-panel input[type='search']:focus,
+  .glass-panel input[type='date']:focus,
+  .glass-panel select:focus,
+  .glass-panel textarea:focus {
+    border-color: rgba(37,99,235,0.6);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
+  }
+
+  /* Override cases where components used the dark-mode specific border
+     utility `border-[rgba(255,255,255,0.06)]` which is nearly invisible
+     in light mode. Target elements whose `class` attribute contains that
+     substring and give them a readable light-mode border. */
+  .glass-panel [class*="border-[rgba(255,255,255,0.06)"] ,
+  .dark-panel [class*="border-[rgba(255,255,255,0.06)"] {
+    border: 1px solid var(--border-color) !important;
+    background: var(--input) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Make common slate utilities inside glass-panels readable by mapping
+     them to semantic variables. This helps table headers and small labels
+     inside panels (like the exchange tables) render correctly in light mode. */
+  .glass-panel .text-slate-100 { color: var(--text-primary) !important; }
+  .glass-panel .text-slate-200 { color: var(--text-primary) !important; }
+  .glass-panel .text-slate-300 { color: var(--text-secondary) !important; }
+  .glass-panel .text-slate-400 { color: var(--text-secondary) !important; }
+  .glass-panel .text-slate-500 { color: var(--text-secondary) !important; }
+
+  .view-card input[type='text']:focus,
+  .view-card input[type='number']:focus,
+  .view-card input[type='search']:focus,
+  .view-card input[type='date']:focus,
+  .view-card select:focus {
+    border-color: rgba(37,99,235,0.6);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
+  }
+
+  .view-card textarea {
+    width: 100%;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    border: 1px solid var(--border-color);
+    background: var(--input);
+    color: var(--text-primary);
+    outline: none;
+    box-shadow: none;
+  }
+
+  .view-card textarea:focus {
+    border-color: rgba(37,99,235,0.6);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.06);
+  }
+
+  /* POS search bar: remove extra input border so it looks clean inside the
+     sticky search row (the container already has panel styling). */
+  .mb-4 > .input-field {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    color: var(--text-primary);
+  }
+
+  .mb-4 > .input-field::placeholder { color: rgba(15,23,42,0.45); }
+}

@@ -76,10 +76,10 @@ function save() {
   <div class="space-y-4">
     <div class="grid grid-cols-3 gap-4">
       <div>
-        <label class="block text-sm text-gray-700">Product</label>
+        <label class="block text-sm text-slate-200">Product</label>
         <select
           v-model="selectedProductId"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          class="mt-1 w-full rounded-md border border-[rgba(255,255,255,0.06)] px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         >
           <option :value="null">Select Product</option>
           <option v-for="p in productsStore.products" :key="p.id" :value="p.id">
@@ -88,22 +88,22 @@ function save() {
         </select>
       </div>
       <div>
-        <label class="block text-sm text-gray-700">Quantity</label>
+        <label class="block text-sm text-slate-200">Quantity</label>
         <input
           v-model.number="quantity"
           type="number"
           min="1"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          class="mt-1 w-full rounded-md border border-[rgba(255,255,255,0.06)] px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         />
       </div>
       <div>
-        <label class="block text-sm text-gray-700">Unit Price</label>
+        <label class="block text-sm text-slate-200">Unit Price</label>
         <input
           v-model.number="unitPrice"
           type="number"
           min="0"
           step="0.01"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          class="mt-1 w-full rounded-md border border-[rgba(255,255,255,0.06)] px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         />
       </div>
     </div>
@@ -114,10 +114,10 @@ function save() {
       Add Item
     </button>
 
-    <div v-if="items.length > 0" class="rounded-lg border border-gray-200 p-4">
+    <div v-if="items.length > 0" class="rounded-lg border border-transparent p-4">
       <h4 class="mb-2 font-medium">Items</h4>
       <table class="w-full text-sm">
-        <thead class="bg-gray-50">
+        <thead class="dark-panel">
           <tr>
             <th class="px-2 py-1 text-left text-xs">Product</th>
             <th class="px-2 py-1 text-right text-xs">Qty</th>
@@ -148,18 +148,18 @@ function save() {
     </div>
 
     <div>
-      <label class="block text-sm text-gray-700">Due Date</label>
+      <label class="block text-sm text-slate-200">Due Date</label>
       <input
         v-model="dueDate"
         type="date"
-        class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+        class="mt-1 w-full rounded-md border border-[rgba(255,255,255,0.06)] px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
       />
     </div>
 
     <div class="flex justify-end gap-2">
       <button
         @click="emit('close')"
-        class="rounded-md border border-gray-300 px-4 py-2 text-sm"
+        class="rounded-md border border-[rgba(255,255,255,0.06)] px-4 py-2 text-sm"
       >
         Cancel
       </button>

@@ -56,14 +56,14 @@ defineExpose({
 </script>
 
 <template>
-  <div id="invoice-print" class="mx-auto w-full max-w-2xl rounded-lg bg-white p-6 text-gray-900 print:rounded-none print:p-0">
+  <div id="invoice-print" class="mx-auto w-full max-w-2xl rounded-lg bg-white p-6 text-slate-100 print:rounded-none print:p-0">
     <div class="flex items-center gap-3 border-b pb-4">
       <img v-if="shopLogoUrl" :src="shopLogoUrl" alt="logo" class="h-10 w-10 rounded object-cover" />
       <div>
         <div class="text-lg font-semibold">{{ shopName || 'Shop POS' }}</div>
-        <div class="text-xs text-gray-500">Invoice #{{ invoiceNumber }}</div>
+        <div class="text-xs text-slate-400">Invoice #{{ invoiceNumber }}</div>
       </div>
-      <div class="ml-auto text-right text-sm text-gray-600">
+      <div class="ml-auto text-right text-sm text-slate-300">
         <div>{{ new Date(datetime).toLocaleString() }}</div>
         <div v-if="customerName">Customer: {{ customerName }}</div>
         <div>Cashier: {{ cashier }}</div>
@@ -72,13 +72,13 @@ defineExpose({
 
     <div class="mt-4 overflow-hidden rounded border">
       <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
+        <thead class="dark-panel">
           <tr>
-            <th class="px-3 py-2 text-left font-medium text-gray-700">Item</th>
-            <th class="px-3 py-2 text-right font-medium text-gray-700">Qty</th>
-            <th class="px-3 py-2 text-right font-medium text-gray-700">Unit</th>
-            <th class="px-3 py-2 text-right font-medium text-gray-700">Discount</th>
-            <th class="px-3 py-2 text-right font-medium text-gray-700">Total</th>
+            <th class="px-3 py-2 text-left font-medium text-slate-200">Item</th>
+            <th class="px-3 py-2 text-right font-medium text-slate-200">Qty</th>
+            <th class="px-3 py-2 text-right font-medium text-slate-200">Unit</th>
+            <th class="px-3 py-2 text-right font-medium text-slate-200">Discount</th>
+            <th class="px-3 py-2 text-right font-medium text-slate-200">Total</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -95,23 +95,23 @@ defineExpose({
 
     <div class="mt-4 space-y-1 text-sm">
       <div class="flex items-center justify-between">
-        <span class="text-gray-600">Subtotal</span>
-        <span class="font-medium text-gray-900">₹{{ subtotal.toFixed(2) }}</span>
+        <span class="text-slate-300">Subtotal</span>
+        <span class="font-medium text-slate-100">₹{{ subtotal.toFixed(2) }}</span>
       </div>
       <div class="flex items-center justify-between">
-        <span class="text-gray-600">Product Discounts</span>
-        <span class="font-medium text-gray-900">₹{{ productDiscountTotal.toFixed(2) }}</span>
+        <span class="text-slate-300">Product Discounts</span>
+        <span class="font-medium text-slate-100">₹{{ productDiscountTotal.toFixed(2) }}</span>
       </div>
       <div class="flex items-center justify-between">
-        <span class="text-gray-600">
+        <span class="text-slate-300">
           Invoice Discount
           ({{ invoiceDiscountMode === 'percent' ? `${invoiceDiscountValue}%` : `₹${invoiceDiscountValue.toFixed(2)}` }})
         </span>
-        <span class="font-medium text-gray-900">₹{{ invoiceDiscountAmount.toFixed(2) }}</span>
+        <span class="font-medium text-slate-100">₹{{ invoiceDiscountAmount.toFixed(2) }}</span>
       </div>
       <div class="flex items-center justify-between">
-        <span class="text-gray-600">Payment</span>
-        <span class="font-medium text-gray-900">{{ paymentType }}</span>
+        <span class="text-slate-300">Payment</span>
+        <span class="font-medium text-slate-100">{{ paymentType }}</span>
       </div>
       <div class="flex items-center justify-between text-base font-semibold">
         <span>Grand Total</span>
@@ -123,7 +123,7 @@ defineExpose({
       <BarcodeDisplay ref="barcodeSvgRef" :value="invoiceNumber" />
     </div>
 
-    <div class="mt-6 text-center text-sm text-gray-600">Thank you for your purchase!</div>
+    <div class="mt-6 text-center text-sm text-slate-300">Thank you for your purchase!</div>
   </div>
 </template>
 

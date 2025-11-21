@@ -114,154 +114,125 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 class="mb-3 text-lg font-semibold text-gray-800">
+    <div class="glass-panel space-y-4">
+      <h2 class="section-heading">
         {{ editingId == null ? 'Add Customer' : 'Edit Customer' }}
       </h2>
-      <div v-if="errorMessage" class="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">
+      <div v-if="errorMessage" class="rounded-2xl border border-red-100 bg-red-50/70 px-4 py-2 text-sm text-red-700">
         {{ errorMessage }}
       </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label class="block text-sm text-gray-700">Full Name <span class="text-red-500">*</span></label>
+          <label class="subtle-label">Full Name *</label>
           <input
             v-model="form.fullName"
             type="text"
             placeholder="John Doe"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Phone <span class="text-red-500">*</span></label>
+          <label class="subtle-label">Phone *</label>
           <input
             v-model="form.phone"
             type="tel"
             placeholder="+1234567890"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Email (Optional)</label>
+          <label class="subtle-label">Email (Optional)</label>
           <input
             v-model="form.email"
             type="email"
             placeholder="john@example.com"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="input-field"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Address (Optional)</label>
+          <label class="subtle-label">Address (Optional)</label>
           <input
             v-model="form.address"
             type="text"
             placeholder="123 Main St, City"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            class="input-field"
           />
         </div>
       </div>
-      <div class="mt-4 flex gap-2">
-        <button
-          @click="save"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
+      <div class="flex gap-2">
+        <button @click="save" class="btn-primary text-white">
           {{ editingId == null ? 'Add Customer' : 'Save Changes' }}
         </button>
-        <button @click="resetForm" class="rounded-md border border-gray-300 px-4 py-2 text-sm">Clear</button>
+        <button @click="resetForm" class="btn-ghost">Clear</button>
       </div>
     </div>
 
-    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div class="mb-4 flex flex-wrap items-center gap-3">
-        <h2 class="text-lg font-semibold text-gray-800">Customers ({{ filtered.length }})</h2>
-        <div class="ml-auto flex flex-wrap gap-2">
-          <input
-            v-model="query"
-            type="text"
-            placeholder="Search by name, phone, email..."
-            class="w-64 rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-          <select
-            v-model="filterDues"
-            class="rounded-md border border-gray-300 px-3 py-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          >
-            <option value="all">All Customers</option>
+    <div class="glass-panel space-y-5">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <h2 class="section-heading">Customers ({{ filtered.length }})</h2>
+        <div class="flex items-center gap-2">
+          <select v-model="filterDues" class="input-field w-28 text-xs">
+            <option value="all">All</option>
             <option value="with-dues">With Dues</option>
             <option value="no-dues">No Dues</option>
           </select>
-          <button
-            @click="clearFilters"
-            class="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
-          >
-            Clear Filters
-          </button>
+          <button @click="clearFilters" class="btn-ghost text-xs px-2">Reset</button>
+          <input v-model="query" type="search" placeholder="Search..." class="input-field w-32 ml-4 text-xs" style="margin-left:auto;" />
         </div>
       </div>
 
-      <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-          <div class="text-xs text-gray-600">Total Customers</div>
-          <div class="mt-1 text-xl font-semibold text-gray-900">{{ customersStore.totalCustomers }}</div>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-transparent bg-blue-50/70 p-4">
+          <div class="subtle-label">Total Customers</div>
+          <div class="mt-2 text-2xl font-bold text-blue-900">{{ customersStore.totalCustomers }}</div>
         </div>
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-          <div class="text-xs text-gray-600">Total Dues</div>
-          <div class="mt-1 text-xl font-semibold text-red-600">₹{{ customersStore.totalDues.toFixed(2) }}</div>
+        <div class="rounded-2xl border border-transparent bg-orange-50/80 p-4">
+          <div class="subtle-label">Total Dues</div>
+          <div class="mt-2 text-2xl font-bold text-orange-800">₹{{ customersStore.totalDues.toFixed(2) }}</div>
         </div>
-        <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-          <div class="text-xs text-gray-600">Customers with Dues</div>
-          <div class="mt-1 text-xl font-semibold text-orange-600">{{ customersStore.customersWithDues.length }}</div>
+        <div class="rounded-2xl border border-transparent bg-emerald-50/80 p-4">
+          <div class="subtle-label">With Dues</div>
+          <div class="mt-2 text-2xl font-bold text-emerald-700">{{ customersStore.customersWithDues.length }}</div>
         </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Name</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Phone</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-700">Email</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-700">Total Purchases</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-700">Total Due</th>
-              <th class="px-4 py-2 text-center text-xs font-medium text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-if="filtered.length === 0" class="text-center text-gray-500">
-              <td colspan="6" class="px-4 py-8">No customers found</td>
-            </tr>
-            <tr v-for="customer in filtered" :key="customer.id" class="hover:bg-gray-50">
-              <td class="px-4 py-2 font-medium text-gray-900">{{ customer.fullName }}</td>
-              <td class="px-4 py-2 text-gray-700">{{ customer.phone }}</td>
-              <td class="px-4 py-2 text-gray-600">{{ customer.email || '-' }}</td>
-              <td class="px-4 py-2 text-right font-semibold text-gray-900">
-                ₹{{ customer.totalPurchases.toFixed(2) }}
-              </td>
-              <td class="px-4 py-2 text-right">
-                <span
-                  class="font-semibold"
-                  :class="customer.totalDue > 0 ? 'text-red-600' : 'text-green-600'"
-                >
+      <div class="overflow-hidden rounded-2xl border border-slate-100">
+        <div class="max-h-[520px] overflow-auto">
+          <table class="table-modern">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th class="text-right">Total Purchases</th>
+                <th class="text-right">Total Due</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filtered.length === 0">
+                <td colspan="6" class="text-center text-slate-400">No customers found</td>
+              </tr>
+              <tr v-for="customer in filtered" :key="customer.id">
+                <td class="font-semibold text-slate-900">{{ customer.fullName }}</td>
+                <td>{{ customer.phone }}</td>
+                <td>{{ customer.email || '-' }}</td>
+                <td class="text-right font-semibold text-slate-900">
+                  ₹{{ customer.totalPurchases.toFixed(2) }}
+                </td>
+                <td class="text-right font-semibold" :class="customer.totalDue > 0 ? 'text-red-600' : 'text-emerald-600'">
                   ₹{{ customer.totalDue.toFixed(2) }}
-                </span>
-              </td>
-              <td class="px-4 py-2 text-center">
-                <div class="flex justify-center gap-2">
-                  <button
-                    @click="edit(customer)"
-                    class="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    @click="remove(customer.id)"
-                    class="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td class="text-center">
+                  <div class="inline-flex gap-2">
+                    <button @click="edit(customer)" class="btn-ghost text-xs px-3 py-1">Edit</button>
+                    <button @click="remove(customer.id)" class="btn-danger text-xs px-3 py-1">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
