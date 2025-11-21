@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
 const PosView = () => import('@/views/PosView.vue')
@@ -33,7 +33,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(import.meta.env.BASE_URL), // <-- CHANGED TO HASH MODE
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
@@ -48,3 +48,4 @@ router.beforeEach((to, _from, next) => {
 })
 
 export default router
+
