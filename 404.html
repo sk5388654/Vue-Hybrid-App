@@ -26,8 +26,28 @@
     <link rel="manifest" href="/Vue-Hybrid-App/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/Vue-Hybrid-App/registerSW.js"></script></head>
     
     <body>
-        <div id="app"></div>
-        
+                <div id="app"></div>
+                <script>
+                    // If a user lands on the user-root (e.g. /pos) instead of the repo
+                    // path (/Vue-Hybrid-App/pos), redirect them to the repo-prefixed URL.
+                    (function(){
+                        try{
+                            var repoPrefix = '/Vue-Hybrid-App';
+                            var p = location.pathname || '/';
+                            // If path already contains the repo prefix, do nothing.
+                            if (!p.startsWith(repoPrefix + '/')) {
+                                // If path looks like a SPA route (e.g. /pos or /admin/...), redirect
+                                // to the repo-prefixed equivalent.
+                                var spaRoutes = ['/', '/pos', '/login', '/admin', '/reports', '/sales-history', '/print'];
+                                var shouldRedirect = spaRoutes.some(function(r){ return p === r || p.indexOf(r + '/') === 0; });
+                                if (shouldRedirect) {
+                                    var newPath = repoPrefix + p;
+                                    location.replace(newPath + (location.search||'') + (location.hash||''));
+                                }
+                            }
+                        }catch(e){/* ignore */}
+                    })();
+                </script>
     </body>
 
 </html>
