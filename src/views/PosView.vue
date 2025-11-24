@@ -577,7 +577,16 @@ function checkout() {
     alert('Grand total must be greater than zero.')
     return
   }
-  isModalOpen.value = true
+  // If mobile cart drawer is open, close it first so the Receipt modal appears above it.
+  // We add a short delay to allow the drawer transition to finish (250ms).
+  if (typeof cartOpen !== 'undefined' && cartOpen.value) {
+    closeCart()
+    setTimeout(() => {
+      isModalOpen.value = true
+    }, 250)
+  } else {
+    isModalOpen.value = true
+  }
 }
 
 function confirmCheckout() {
