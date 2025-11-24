@@ -1,77 +1,3 @@
-<script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useSuppliersStore, type PurchaseOrder } from '@/store/suppliers'
-import { useProductsStore } from '@/store/products'
-
-const props = defineProps<{
-  supplierId: string
-}>()
-
-const emit = defineEmits<{
-  close: []
-  saved: []
-}>()
-
-const suppliersStore = useSuppliersStore()
-const productsStore = useProductsStore()
-
-const items = reactive<Array<{
-  productId: number
-  productName: string
-  quantity: number
-  unitPrice: number
-  total: number
-}>>([])
-
-const selectedProductId = ref<number | null>(null)
-const quantity = ref(1)
-const unitPrice = ref(0)
-const dueDate = ref(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-
-const totalAmount = computed(() => items.reduce((sum, item) => sum + item.total, 0))
-
-function addItem() {
-  if (!selectedProductId.value || quantity.value <= 0 || unitPrice.value <= 0) return
-  const product = productsStore.products.find(p => p.id === selectedProductId.value!)
-  if (!product) return
-
-  items.push({
-    productId: product.id,
-    productName: product.name,
-    quantity: quantity.value,
-    unitPrice: unitPrice.value,
-    total: quantity.value * unitPrice.value,
-  })
-
-  selectedProductId.value = null
-  quantity.value = 1
-  unitPrice.value = 0
-}
-
-function removeItem(index: number) {
-  items.splice(index, 1)
-}
-
-function save() {
-  if (items.length === 0) {
-    alert('Please add at least one item')
-    return
-  }
-
-  suppliersStore.createPO({
-    supplierId: props.supplierId,
-    items: [...items],
-    totalAmount: totalAmount.value,
-    status: 'Pending',
-    dueDate: dueDate.value,
-  })
-
-  items.splice(0, items.length)
-  emit('saved')
-  emit('close')
-}
-</script>
-
 <template>
   <div class="space-y-4">
     <div class="grid grid-cols-3 gap-4">
@@ -173,3 +99,77 @@ function save() {
   </div>
 </template>
 
+<script setup lang="ts">
+import { computed, reactive, ref } from 'vue'
+import { useSuppliersStore, type PurchaseOrder } from '@/store/suppliers'
+import { useProductsStore } from '@/store/products'
+
+const props = defineProps<{
+  supplierId: string
+}>()
+
+const emit = defineEmits<{
+  close: []
+  saved: []
+}>()
+
+const suppliersStore = useSuppliersStore()
+const productsStore = useProductsStore()
+
+const items = reactive<Array<{
+  productId: number
+  productName: string
+  quantity: number
+  unitPrice: number
+  total: number
+}>>([])
+
+const selectedProductId = ref<number | null>(null)
+const quantity = ref(1)
+const unitPrice = ref(0)
+const dueDate = ref(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+
+const totalAmount = computed(() => items.reduce((sum, item) => sum + item.total, 0))
+
+function addItem() {
+  if (!selectedProductId.value || quantity.value <= 0 || unitPrice.value <= 0) return
+  const product = productsStore.products.find(p => p.id === selectedProductId.value!)
+  if (!product) return
+
+  items.push({
+    productId: product.id,
+    productName: product.name,
+    quantity: quantity.value,
+    unitPrice: unitPrice.value,
+    total: quantity.value * unitPrice.value,
+  })
+
+  selectedProductId.value = null
+  quantity.value = 1
+  unitPrice.value = 0
+}
+
+function removeItem(index: number) {
+  items.splice(index, 1)
+}
+
+function save() {
+  if (items.length === 0) {
+    alert('Please add at least one item')
+    return
+  }
+
+  suppliersStore.createPO({
+    supplierId: props.supplierId,
+    items: [...items],
+    totalAmount: totalAmount.value,
+    status: 'Pending',
+    dueDate: dueDate.value,
+  })
+
+  items.splice(0, items.length)
+  emit('saved')
+  emit('close')
+}
+</script>
+<style scoped>  </style>

@@ -1,111 +1,3 @@
-<script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { exportInvoicePdf, exportRefundPdf } from '@/utils/print'
-import type { RefundRecord } from '@/store/refunds'
-import type { Sale } from '@/store/sales'
-import { useSalesStore } from '@/store/sales'
-import { useStoresStore } from '@/store/stores'
-
-const props = defineProps<{
-  refund: RefundRecord
-  sale: Sale
-  existingRefunds: RefundRecord[]
-}>()
-
-const emit = defineEmits<{ (e: 'close'): void }>()
-
-const storesStore = useStoresStore()
-const salesStore = useSalesStore()
-
-onMounted(() => {
-  if (!storesStore.stores.length) {
-    storesStore.load()
-  }
-  if (!salesStore.sales.length) {
-    salesStore.load()
-  }
-})
-
-const storeName = computed(() => {
-  const store = storesStore.stores.find((s) => s.id === props.refund.storeId)
-  return store?.name ?? 'Store POS'
-})
-
-const priorRefunds = computed(() =>
-  props.existingRefunds.filter((record) => record.refundId !== props.refund.refundId),
-)
-
-const totalRefunded = computed(() =>
-  props.existingRefunds.reduce((sum, record) => sum + record.totalRefund, 0),
-)
-
-const exchangeDifferenceLabel = computed(() => {
-  if (!props.refund.exchangeDifference || props.refund.exchangeDifference === 0) return null
-  if (props.refund.exchangeDifference > 0) {
-    return `Balance refunded to customer: ₹${props.refund.exchangeDifference.toFixed(2)}`
-  }
-  return `Customer paid difference: ₹${Math.abs(props.refund.exchangeDifference).toFixed(2)}`
-})
-
-const exchangeSale = computed(() => {
-  if (!props.refund.exchangeSaleId) return null
-  return salesStore.sales.find((record) => record.id === props.refund.exchangeSaleId) ?? null
-})
-
-function handlePrint() {
-  if (props.refund.refundType === 'exchange' && exchangeSale.value) {
-    const saleRecord = exchangeSale.value
-    exportInvoicePdf({
-      shopName: storeName.value,
-      invoiceNumber: saleRecord.invoiceNumber,
-      datetime: saleRecord.datetime,
-      items: saleRecord.items.map((item) => ({
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        lineDiscount: item.lineDiscount,
-        lineTotal: item.lineTotal,
-      })),
-      subtotal: saleRecord.subtotal,
-      productDiscountTotal: saleRecord.productDiscountTotal,
-      invoiceDiscountMode: saleRecord.invoiceDiscountMode,
-      invoiceDiscountValue: saleRecord.invoiceDiscountValue,
-      invoiceDiscountAmount: saleRecord.invoiceDiscountAmount,
-      total: saleRecord.total,
-      paymentType: saleRecord.paymentType,
-      cashier: saleRecord.cashier,
-      customerName: saleRecord.customerName,
-    })
-    return
-  }
-
-  exportRefundPdf({
-    storeName: storeName.value,
-    refundId: props.refund.refundId,
-    invoiceNumber: props.refund.invoiceNumber,
-    refundType: props.refund.refundType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-    refundMethod: props.refund.refundMethod,
-    refundReason: props.refund.refundReason,
-    cashier: props.refund.cashier,
-    refundDate: props.refund.createdAt,
-    refundedItems: props.refund.refundedItems.map((item) => ({
-      name: item.name,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      lineTotal: item.lineTotal,
-    })),
-    exchangedItems: props.refund.exchangedItems?.map((item) => ({
-      name: item.name,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      lineTotal: item.lineTotal,
-    })),
-    totalRefund: props.refund.totalRefund,
-    exchangeDifference: props.refund.exchangeDifference,
-  })
-}
-</script>
-
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div class="w-full max-w-3xl rounded-lg dark-panel">
@@ -238,3 +130,110 @@ function handlePrint() {
   </div>
 </template>
 
+<script setup lang="ts">
+import { computed, onMounted } from 'vue'
+import { exportInvoicePdf, exportRefundPdf } from '@/utils/print'
+import type { RefundRecord } from '@/store/refunds'
+import type { Sale } from '@/store/sales'
+import { useSalesStore } from '@/store/sales'
+import { useStoresStore } from '@/store/stores'
+
+const props = defineProps<{
+  refund: RefundRecord
+  sale: Sale
+  existingRefunds: RefundRecord[]
+}>()
+
+const emit = defineEmits<{ (e: 'close'): void }>()
+
+const storesStore = useStoresStore()
+const salesStore = useSalesStore()
+
+onMounted(() => {
+  if (!storesStore.stores.length) {
+    storesStore.load()
+  }
+  if (!salesStore.sales.length) {
+    salesStore.load()
+  }
+})
+
+const storeName = computed(() => {
+  const store = storesStore.stores.find((s) => s.id === props.refund.storeId)
+  return store?.name ?? 'Store POS'
+})
+
+const priorRefunds = computed(() =>
+  props.existingRefunds.filter((record) => record.refundId !== props.refund.refundId),
+)
+
+const totalRefunded = computed(() =>
+  props.existingRefunds.reduce((sum, record) => sum + record.totalRefund, 0),
+)
+
+const exchangeDifferenceLabel = computed(() => {
+  if (!props.refund.exchangeDifference || props.refund.exchangeDifference === 0) return null
+  if (props.refund.exchangeDifference > 0) {
+    return `Balance refunded to customer: ₹${props.refund.exchangeDifference.toFixed(2)}`
+  }
+  return `Customer paid difference: ₹${Math.abs(props.refund.exchangeDifference).toFixed(2)}`
+})
+
+const exchangeSale = computed(() => {
+  if (!props.refund.exchangeSaleId) return null
+  return salesStore.sales.find((record) => record.id === props.refund.exchangeSaleId) ?? null
+})
+
+function handlePrint() {
+  if (props.refund.refundType === 'exchange' && exchangeSale.value) {
+    const saleRecord = exchangeSale.value
+    exportInvoicePdf({
+      shopName: storeName.value,
+      invoiceNumber: saleRecord.invoiceNumber,
+      datetime: saleRecord.datetime,
+      items: saleRecord.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        lineDiscount: item.lineDiscount,
+        lineTotal: item.lineTotal,
+      })),
+      subtotal: saleRecord.subtotal,
+      productDiscountTotal: saleRecord.productDiscountTotal,
+      invoiceDiscountMode: saleRecord.invoiceDiscountMode,
+      invoiceDiscountValue: saleRecord.invoiceDiscountValue,
+      invoiceDiscountAmount: saleRecord.invoiceDiscountAmount,
+      total: saleRecord.total,
+      paymentType: saleRecord.paymentType,
+      cashier: saleRecord.cashier,
+      customerName: saleRecord.customerName,
+    })
+    return
+  }
+
+  exportRefundPdf({
+    storeName: storeName.value,
+    refundId: props.refund.refundId,
+    invoiceNumber: props.refund.invoiceNumber,
+    refundType: props.refund.refundType.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+    refundMethod: props.refund.refundMethod,
+    refundReason: props.refund.refundReason,
+    cashier: props.refund.cashier,
+    refundDate: props.refund.createdAt,
+    refundedItems: props.refund.refundedItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+    })),
+    exchangedItems: props.refund.exchangedItems?.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+    })),
+    totalRefund: props.refund.totalRefund,
+    exchangeDifference: props.refund.exchangeDifference,
+  })
+}
+</script>

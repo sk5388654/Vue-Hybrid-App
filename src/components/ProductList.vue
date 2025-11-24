@@ -1,24 +1,3 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { Product } from '@/store/products'
-
-const props = defineProps<{
-  products: Product[]
-  disabled?: boolean
-}>()
-
-const emit = defineEmits<{
-  (e: 'add', product: Product): void
-}>()
-
-const query = ref('')
-const filtered = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return props.products
-  return props.products.filter((p) => p.name.toLowerCase().includes(q))
-})
-</script>
-
 <template>
   <div class="rounded-lg p-4 flex flex-col h-full dark-panel">
 
@@ -75,5 +54,26 @@ const filtered = computed(() => {
   </div>
 </template>
 
-<style scoped>
-</style>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import type { Product } from '@/store/products'
+
+const props = defineProps<{
+  products: Product[]
+  disabled?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'add', product: Product): void
+}>()
+
+const query = ref('')
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return props.products
+  return props.products.filter((p) => p.name.toLowerCase().includes(q))
+})
+</script>
+
+<style scoped></style>

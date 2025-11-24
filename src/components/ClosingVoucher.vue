@@ -1,209 +1,3 @@
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref, watchEffect, watch } from 'vue'
-import { useClosingVoucherStore } from '@/store/closingVouchers'
-import { useStoresStore } from '@/store/stores'
-import { useAuthStore } from '@/store/auth'
-import { useSalesStore } from '@/store/sales'
-import { useExpensesStore } from '@/store/expenses'
-import { useRefundsStore } from '@/store/refunds'
-
-const closingStore = useClosingVoucherStore()
-const storesStore = useStoresStore()
-const authStore = useAuthStore()
-const salesStore = useSalesStore()
-const expensesStore = useExpensesStore()
-const refundsStore = useRefundsStore()
-
-const startForm = reactive({
-  openingCash: 0,
-})
-
-const form = reactive({
-  shiftStart: '',
-  shiftEndDisplay: '--',
-  openingCash: 0,
-  actualClosingCash: 0,
-  remarks: '',
-  managerApproved: false,
-})
-
-const computedValues = reactive({
-  totalSales: 0,
-  paymentBreakdown: [] as { method: string; amount: number }[],
-  discounts: 0,
-  refunds: 0,
-  refundCount: 0,
-  refundBreakdown: {} as Record<string, { amount: number; count: number }>,
-  expenses: 0,
-  expectedClosingCash: 0,
-})
-
-const vouchers = computed(() => closingStore.vouchersForCurrentStore)
-const activeShift = computed(() => closingStore.activeShift)
-const shiftEnded = computed(() => !!activeShift.value?.endedAt)
-const isManager = computed(() => authStore.isManager)
-const isAdmin = computed(() => authStore.isAdmin)
-const canManage = computed(() => isManager.value || isAdmin.value)
-
-const difference = computed(() => form.actualClosingCash - computedValues.expectedClosingCash)
-const differenceClass = computed(() => {
-  if (difference.value === 0) return 'text-green-600'
-  if (Math.abs(difference.value) < 100) return 'text-yellow-500'
-  return 'text-red-600'
-})
-
-const canStartShift = computed(() => startForm.openingCash >= 0)
-const canSubmitVoucher = computed(() => !!activeShift.value && !!activeShift.value.endedAt && isManager.value)
-
-const actualTouched = ref(false)
-
-const refundBreakdownList = computed(() => {
-  const breakdown = (computedValues.refundBreakdown || {}) as Record<string, { amount: number; count: number }>
-  return Object.keys(breakdown).map((typeKey) => {
-    const data = breakdown[typeKey] || { amount: 0, count: 0 }
-    const label = typeKey.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-    return {
-      type: typeKey,
-      amount: data.amount,
-      count: data.count,
-      label,
-    }
-  })
-})
-
-const formatDate = (iso?: string) => {
-  if (!iso) return '--'
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString()
-}
-
-function startShift() {
-  if (!canStartShift.value) {
-    alert('Opening cash must be zero or greater.')
-    return
-  }
-  closingStore.startShift(Number(startForm.openingCash))
-  startForm.openingCash = closingStore.lastVoucher?.actualClosingCash ?? 0
-  actualTouched.value = false
-  hydrateFormFromShift()
-}
-
-function endShift() {
-  closingStore.endShift()
-  actualTouched.value = false
-  hydrateFormFromShift()
-}
-
-function hydrateFormFromShift() {
-  if (!activeShift.value) return
-  form.shiftStart = formatDate(activeShift.value.start)
-  form.shiftEndDisplay = shiftEnded.value ? formatDate(activeShift.value.endedAt) : '--'
-  form.openingCash = activeShift.value.openingCash
-  actualTouched.value = false
-  recalc()
-}
-
-function recalc() {
-  if (!activeShift.value) return
-  const endIso = activeShift.value.endedAt ?? new Date().toISOString()
-  form.shiftEndDisplay = shiftEnded.value ? formatDate(activeShift.value.endedAt) : `${formatDate(endIso)} (preview)`
-  const snapshot = closingStore.computeSnapshot({
-    openingCash: Number(form.openingCash),
-    shiftStart: activeShift.value.start,
-    shiftEnd: endIso,
-  })
-  Object.assign(computedValues, snapshot)
-  if (!actualTouched.value) {
-    form.actualClosingCash = snapshot.expectedClosingCash
-  }
-}
-
-watchEffect(() => {
-  const shift = activeShift.value
-  if (!shift) return
-  shift.endedAt
-  salesStore.sales
-  expensesStore.expensesForCurrentStore
-  refundsStore.refundsForCurrentStore
-  recalc()
-})
-
-watch(
-  () => closingStore.lastVoucher,
-  (last) => {
-    if (!activeShift.value) {
-      startForm.openingCash = last?.actualClosingCash ?? 0
-    }
-  },
-)
-
-function submitVoucher() {
-  if (!canSubmitVoucher.value || !activeShift.value) {
-    alert('Only managers can submit the closing voucher after the shift has ended.')
-    return
-  }
-  const store = storesStore.stores.find(s => s.id === storesStore.currentStoreId)
-  const voucher = closingStore.closeShift({
-    storeId: storesStore.currentStoreId!,
-    storeName: store?.name || 'Unknown Store',
-    cashierName: authStore.user?.displayName || authStore.user?.username || 'Cashier',
-    openingCash: Number(form.openingCash),
-    actualClosingCash: Number(form.actualClosingCash),
-    remarks: form.remarks || undefined,
-    managerApproved: form.managerApproved,
-  })
-  window.open(`/print/closing/${voucher.id}`, '_blank')
-  resetForms()
-}
-
-function resetForms() {
-  form.shiftStart = ''
-  form.shiftEndDisplay = '--'
-  form.openingCash = 0
-  form.actualClosingCash = 0
-  form.remarks = ''
-  form.managerApproved = false
-  computedValues.totalSales = 0
-  computedValues.paymentBreakdown = []
-  computedValues.discounts = 0
-  computedValues.refunds = 0
-  computedValues.refundCount = 0
-  computedValues.refundBreakdown = {}
-  computedValues.expenses = 0
-  computedValues.expectedClosingCash = 0
-  actualTouched.value = false
-  startForm.openingCash = closingStore.lastVoucher?.actualClosingCash ?? 0
-}
-
-function handleView(voucherId: string) {
-  window.open(`/print/closing/${voucherId}`, '_blank')
-}
-
-function handleDelete(voucherId: string) {
-  const ok = globalThis.confirm('Are you sure you want to delete this closing voucher? This action cannot be undone.')
-  if (!ok) return
-  const removed = closingStore.deleteVoucher(voucherId)
-  if (removed) {
-    // recalc or reload lastVoucher/shift where appropriate
-    // notify user
-    alert('Closing voucher deleted.')
-  } else {
-    alert('Unable to delete voucher. It may have already been removed or no store is selected.')
-  }
-}
-
-onMounted(() => {
-  salesStore.load()
-  expensesStore.load()
-  refundsStore.load()
-  closingStore.setCurrentStore()
-  startForm.openingCash = closingStore.lastVoucher?.actualClosingCash ?? 0
-  if (activeShift.value) {
-    hydrateFormFromShift()
-  }
-})
-</script>
-
 <template>
   <div class="space-y-6">
     <div
@@ -473,3 +267,209 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref, watchEffect, watch } from 'vue'
+import { useClosingVoucherStore } from '@/store/closingVouchers'
+import { useStoresStore } from '@/store/stores'
+import { useAuthStore } from '@/store/auth'
+import { useSalesStore } from '@/store/sales'
+import { useExpensesStore } from '@/store/expenses'
+import { useRefundsStore } from '@/store/refunds'
+
+const closingStore = useClosingVoucherStore()
+const storesStore = useStoresStore()
+const authStore = useAuthStore()
+const salesStore = useSalesStore()
+const expensesStore = useExpensesStore()
+const refundsStore = useRefundsStore()
+
+const startForm = reactive({
+  openingCash: 0,
+})
+
+const form = reactive({
+  shiftStart: '',
+  shiftEndDisplay: '--',
+  openingCash: 0,
+  actualClosingCash: 0,
+  remarks: '',
+  managerApproved: false,
+})
+
+const computedValues = reactive({
+  totalSales: 0,
+  paymentBreakdown: [] as { method: string; amount: number }[],
+  discounts: 0,
+  refunds: 0,
+  refundCount: 0,
+  refundBreakdown: {} as Record<string, { amount: number; count: number }>,
+  expenses: 0,
+  expectedClosingCash: 0,
+})
+
+const vouchers = computed(() => closingStore.vouchersForCurrentStore)
+const activeShift = computed(() => closingStore.activeShift)
+const shiftEnded = computed(() => !!activeShift.value?.endedAt)
+const isManager = computed(() => authStore.isManager)
+const isAdmin = computed(() => authStore.isAdmin)
+const canManage = computed(() => isManager.value || isAdmin.value)
+
+const difference = computed(() => form.actualClosingCash - computedValues.expectedClosingCash)
+const differenceClass = computed(() => {
+  if (difference.value === 0) return 'text-green-600'
+  if (Math.abs(difference.value) < 100) return 'text-yellow-500'
+  return 'text-red-600'
+})
+
+const canStartShift = computed(() => startForm.openingCash >= 0)
+const canSubmitVoucher = computed(() => !!activeShift.value && !!activeShift.value.endedAt && isManager.value)
+
+const actualTouched = ref(false)
+
+const refundBreakdownList = computed(() => {
+  const breakdown = (computedValues.refundBreakdown || {}) as Record<string, { amount: number; count: number }>
+  return Object.keys(breakdown).map((typeKey) => {
+    const data = breakdown[typeKey] || { amount: 0, count: 0 }
+    const label = typeKey.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+    return {
+      type: typeKey,
+      amount: data.amount,
+      count: data.count,
+      label,
+    }
+  })
+})
+
+const formatDate = (iso?: string) => {
+  if (!iso) return '--'
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString()
+}
+
+function startShift() {
+  if (!canStartShift.value) {
+    alert('Opening cash must be zero or greater.')
+    return
+  }
+  closingStore.startShift(Number(startForm.openingCash))
+  startForm.openingCash = closingStore.lastVoucher?.actualClosingCash ?? 0
+  actualTouched.value = false
+  hydrateFormFromShift()
+}
+
+function endShift() {
+  closingStore.endShift()
+  actualTouched.value = false
+  hydrateFormFromShift()
+}
+
+function hydrateFormFromShift() {
+  if (!activeShift.value) return
+  form.shiftStart = formatDate(activeShift.value.start)
+  form.shiftEndDisplay = shiftEnded.value ? formatDate(activeShift.value.endedAt) : '--'
+  form.openingCash = activeShift.value.openingCash
+  actualTouched.value = false
+  recalc()
+}
+
+function recalc() {
+  if (!activeShift.value) return
+  const endIso = activeShift.value.endedAt ?? new Date().toISOString()
+  form.shiftEndDisplay = shiftEnded.value ? formatDate(activeShift.value.endedAt) : `${formatDate(endIso)} (preview)`
+  const snapshot = closingStore.computeSnapshot({
+    openingCash: Number(form.openingCash),
+    shiftStart: activeShift.value.start,
+    shiftEnd: endIso,
+  })
+  Object.assign(computedValues, snapshot)
+  if (!actualTouched.value) {
+    form.actualClosingCash = snapshot.expectedClosingCash
+  }
+}
+
+watchEffect(() => {
+  const shift = activeShift.value
+  if (!shift) return
+  shift.endedAt
+  salesStore.sales
+  expensesStore.expensesForCurrentStore
+  refundsStore.refundsForCurrentStore
+  recalc()
+})
+
+watch(
+  () => closingStore.lastVoucher,
+  (last) => {
+    if (!activeShift.value) {
+      startForm.openingCash = last?.actualClosingCash ?? 0
+    }
+  },
+)
+
+function submitVoucher() {
+  if (!canSubmitVoucher.value || !activeShift.value) {
+    alert('Only managers can submit the closing voucher after the shift has ended.')
+    return
+  }
+  const store = storesStore.stores.find(s => s.id === storesStore.currentStoreId)
+  const voucher = closingStore.closeShift({
+    storeId: storesStore.currentStoreId!,
+    storeName: store?.name || 'Unknown Store',
+    cashierName: authStore.user?.displayName || authStore.user?.username || 'Cashier',
+    openingCash: Number(form.openingCash),
+    actualClosingCash: Number(form.actualClosingCash),
+    remarks: form.remarks || undefined,
+    managerApproved: form.managerApproved,
+  })
+  window.open(`/print/closing/${voucher.id}`, '_blank')
+  resetForms()
+}
+
+function resetForms() {
+  form.shiftStart = ''
+  form.shiftEndDisplay = '--'
+  form.openingCash = 0
+  form.actualClosingCash = 0
+  form.remarks = ''
+  form.managerApproved = false
+  computedValues.totalSales = 0
+  computedValues.paymentBreakdown = []
+  computedValues.discounts = 0
+  computedValues.refunds = 0
+  computedValues.refundCount = 0
+  computedValues.refundBreakdown = {}
+  computedValues.expenses = 0
+  computedValues.expectedClosingCash = 0
+  actualTouched.value = false
+  startForm.openingCash = closingStore.lastVoucher?.actualClosingCash ?? 0
+}
+
+function handleView(voucherId: string) {
+  window.open(`/print/closing/${voucherId}`, '_blank')
+}
+
+function handleDelete(voucherId: string) {
+  const ok = globalThis.confirm('Are you sure you want to delete this closing voucher? This action cannot be undone.')
+  if (!ok) return
+  const removed = closingStore.deleteVoucher(voucherId)
+  if (removed) {
+    alert('Closing voucher deleted.')
+  } else {
+    alert('Unable to delete voucher. It may have already been removed or no store is selected.')
+  }
+}
+
+onMounted(() => {
+  salesStore.load()
+  expensesStore.load()
+  refundsStore.load()
+  closingStore.setCurrentStore()
+  startForm.openingCash = closingStore.lastVoucher?.actualClosingCash ?? 0
+  if (activeShift.value) {
+    hydrateFormFromShift()
+  }
+})
+</script>
+

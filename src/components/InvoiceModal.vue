@@ -1,3 +1,39 @@
+<template>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" @keydown.ctrl.p.prevent.stop="onPrint">
+    <div class="w-full max-w-3xl rounded-lg dark-panel">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h3 class="text-base font-semibold text-slate-100">Invoice</h3>
+        <button class="text-slate-400 hover:text-slate-200" @click="emit('close')">✕</button>
+      </div>
+      <div class="max-h-[70vh] overflow-auto p-4">
+        <InvoicePrint
+          ref="printRef"
+          :shopName="shopName"
+          :shopLogoUrl="shopLogoUrl"
+          :invoiceNumber="invoiceNumber"
+          :datetime="datetime"
+          :items="items"
+          :subtotal="subtotal"
+          :productDiscountTotal="productDiscountTotal"
+          :invoiceDiscountMode="invoiceDiscountMode"
+          :invoiceDiscountValue="invoiceDiscountValue"
+          :invoiceDiscountAmount="invoiceDiscountAmount"
+          :total="total"
+          :paymentType="paymentType"
+          :cashier="cashier"
+          :customerName="customerName"
+        />
+      </div>
+      <div class="flex justify-end gap-2 border-t px-4 py-3">
+        <button class="rounded-md border border-[rgba(255,255,255,0.06)] px-4 py-2 text-sm text-slate-200 hover:dark-panel" @click="emit('close')">Close</button>
+        <button class="rounded-md border border-[rgba(255,255,255,0.06)] px-4 py-2 text-sm" @click="onDownloadPdf">Download PDF</button>
+        <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white" @click="onPrint">Print Invoice</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import InvoicePrint from '@/components/InvoicePrint.vue'
@@ -51,41 +87,6 @@ function onPrint() {
 }
 </script>
 
-<template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" @keydown.ctrl.p.prevent.stop="onPrint">
-    <div class="w-full max-w-3xl rounded-lg dark-panel">
-      <div class="flex items-center justify-between border-b px-4 py-3">
-        <h3 class="text-base font-semibold text-slate-100">Invoice</h3>
-        <button class="text-slate-400 hover:text-slate-200" @click="emit('close')">✕</button>
-      </div>
-      <div class="max-h-[70vh] overflow-auto p-4">
-        <InvoicePrint
-          ref="printRef"
-          :shopName="shopName"
-          :shopLogoUrl="shopLogoUrl"
-          :invoiceNumber="invoiceNumber"
-          :datetime="datetime"
-          :items="items"
-          :subtotal="subtotal"
-          :productDiscountTotal="productDiscountTotal"
-          :invoiceDiscountMode="invoiceDiscountMode"
-          :invoiceDiscountValue="invoiceDiscountValue"
-          :invoiceDiscountAmount="invoiceDiscountAmount"
-          :total="total"
-          :paymentType="paymentType"
-          :cashier="cashier"
-          :customerName="customerName"
-        />
-      </div>
-      <div class="flex justify-end gap-2 border-t px-4 py-3">
-        <button class="rounded-md border border-[rgba(255,255,255,0.06)] px-4 py-2 text-sm text-slate-200 hover:dark-panel" @click="emit('close')">Close</button>
-        <button class="rounded-md border border-[rgba(255,255,255,0.06)] px-4 py-2 text-sm" @click="onDownloadPdf">Download PDF</button>
-        <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white" @click="onPrint">Print Invoice</button>
-      </div>
-    </div>
-  </div>
-</template>
 
-<style scoped>
-</style>
+<style scoped></style>
 

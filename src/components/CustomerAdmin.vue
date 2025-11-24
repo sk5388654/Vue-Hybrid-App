@@ -1,116 +1,3 @@
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useCustomersStore, type Customer } from '@/store/customers'
-
-const customersStore = useCustomersStore()
-
-const form = reactive<Omit<Customer, 'id' | 'storeId' | 'totalPurchases' | 'totalDue' | 'createdAt' | 'updatedAt'>>({
-  fullName: '',
-  phone: '',
-  email: '',
-  address: '',
-})
-
-const editingId = ref<string | null>(null)
-const query = ref('')
-const filterDues = ref<'all' | 'with-dues' | 'no-dues'>('all')
-const errorMessage = ref('')
-
-const filtered = computed(() => {
-  let result = customersStore.customersForCurrentStore
-
-  // Search filter
-  const q = query.value.trim().toLowerCase()
-  if (q) {
-    result = result.filter(
-      c =>
-        c.fullName.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.email?.toLowerCase().includes(q) ||
-        c.address?.toLowerCase().includes(q)
-    )
-  }
-
-  // Dues filter
-  if (filterDues.value === 'with-dues') {
-    result = result.filter(c => c.totalDue > 0)
-  } else if (filterDues.value === 'no-dues') {
-    result = result.filter(c => c.totalDue === 0)
-  }
-
-  // Sort by name
-  return result.sort((a, b) => a.fullName.localeCompare(b.fullName))
-})
-
-function resetForm() {
-  form.fullName = ''
-  form.phone = ''
-  form.email = ''
-  form.address = ''
-  editingId.value = null
-  errorMessage.value = ''
-}
-
-function save() {
-  if (!form.fullName.trim() || !form.phone.trim()) {
-    errorMessage.value = 'Name and phone are required'
-    return
-  }
-
-  // Basic phone validation
-  if (!/^[0-9+\-\s()]+$/.test(form.phone.trim())) {
-    errorMessage.value = 'Invalid phone number format'
-    return
-  }
-
-  try {
-    if (editingId.value == null) {
-      customersStore.add({
-        fullName: form.fullName.trim(),
-        phone: form.phone.trim(),
-        email: form.email?.trim() || undefined,
-        address: form.address?.trim() || undefined,
-      })
-    } else {
-      customersStore.update(editingId.value, {
-        fullName: form.fullName.trim(),
-        phone: form.phone.trim(),
-        email: form.email?.trim() || undefined,
-        address: form.address?.trim() || undefined,
-      })
-    }
-    resetForm()
-    errorMessage.value = ''
-  } catch (err: any) {
-    errorMessage.value = err.message || 'Failed to save customer'
-  }
-}
-
-function edit(customer: Customer) {
-  editingId.value = customer.id
-  form.fullName = customer.fullName
-  form.phone = customer.phone
-  form.email = customer.email || ''
-  form.address = customer.address || ''
-  errorMessage.value = ''
-}
-
-function remove(id: string) {
-  if (confirm('Delete this customer? This will also remove their purchase history.')) {
-    customersStore.remove(id)
-    if (editingId.value === id) resetForm()
-  }
-}
-
-function clearFilters() {
-  query.value = ''
-  filterDues.value = 'all'
-}
-
-onMounted(() => {
-  customersStore.load()
-})
-</script>
 
 <template>
   <div class="space-y-6">
@@ -237,6 +124,121 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useCustomersStore, type Customer } from '@/store/customers'
+
+const customersStore = useCustomersStore()
+
+const form = reactive<Omit<Customer, 'id' | 'storeId' | 'totalPurchases' | 'totalDue' | 'createdAt' | 'updatedAt'>>({
+  fullName: '',
+  phone: '',
+  email: '',
+  address: '',
+})
+
+const editingId = ref<string | null>(null)
+const query = ref('')
+const filterDues = ref<'all' | 'with-dues' | 'no-dues'>('all')
+const errorMessage = ref('')
+
+const filtered = computed(() => {
+  let result = customersStore.customersForCurrentStore
+
+  // Search filter
+  const q = query.value.trim().toLowerCase()
+  if (q) {
+    result = result.filter(
+      c =>
+        c.fullName.toLowerCase().includes(q) ||
+        c.phone.includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.address?.toLowerCase().includes(q)
+    )
+  }
+
+  // Dues filter
+  if (filterDues.value === 'with-dues') {
+    result = result.filter(c => c.totalDue > 0)
+  } else if (filterDues.value === 'no-dues') {
+    result = result.filter(c => c.totalDue === 0)
+  }
+
+  // Sort by name
+  return result.sort((a, b) => a.fullName.localeCompare(b.fullName))
+})
+
+function resetForm() {
+  form.fullName = ''
+  form.phone = ''
+  form.email = ''
+  form.address = ''
+  editingId.value = null
+  errorMessage.value = ''
+}
+
+function save() {
+  if (!form.fullName.trim() || !form.phone.trim()) {
+    errorMessage.value = 'Name and phone are required'
+    return
+  }
+
+  // Basic phone validation
+  if (!/^[0-9+\-\s()]+$/.test(form.phone.trim())) {
+    errorMessage.value = 'Invalid phone number format'
+    return
+  }
+
+  try {
+    if (editingId.value == null) {
+      customersStore.add({
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        email: form.email?.trim() || undefined,
+        address: form.address?.trim() || undefined,
+      })
+    } else {
+      customersStore.update(editingId.value, {
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        email: form.email?.trim() || undefined,
+        address: form.address?.trim() || undefined,
+      })
+    }
+    resetForm()
+    errorMessage.value = ''
+  } catch (err: any) {
+    errorMessage.value = err.message || 'Failed to save customer'
+  }
+}
+
+function edit(customer: Customer) {
+  editingId.value = customer.id
+  form.fullName = customer.fullName
+  form.phone = customer.phone
+  form.email = customer.email || ''
+  form.address = customer.address || ''
+  errorMessage.value = ''
+}
+
+function remove(id: string) {
+  if (confirm('Delete this customer? This will also remove their purchase history.')) {
+    customersStore.remove(id)
+    if (editingId.value === id) resetForm()
+  }
+}
+
+function clearFilters() {
+  query.value = ''
+  filterDues.value = 'all'
+}
+
+onMounted(() => {
+  customersStore.load()
+})
+</script>
 
 <style scoped>
 </style>

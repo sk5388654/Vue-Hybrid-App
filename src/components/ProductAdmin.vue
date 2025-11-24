@@ -1,95 +1,3 @@
-<script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useProductsStore, type Product } from '@/store/products'
-import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
-
-const store = useProductsStore()
-const query = ref('')
-
-const form = reactive<Omit<Product, 'id'>>({
-  name: '',
-  price: 0,
-  image: 'https://via.placeholder.com/100',
-  barcode: '',
-  stock: 0,
-})
-
-const errorMessage = ref('')
-const editingId = ref<number | null>(null)
-
-const filtered = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return store.products
-  return store.products.filter((p) =>
-    p.name.toLowerCase().includes(q) ||
-    p.barcode.includes(q)
-  )
-})
-
-function resetForm() {
-  form.name = ''
-  form.price = 0
-  form.image = 'https://via.placeholder.com/100'
-  form.barcode = ''
-  ;(form as any).stock = 0
-  editingId.value = null
-  errorMessage.value = ''
-}
-
-function save() {
-  errorMessage.value = ''
-
-  const nameOk = !!form.name.trim()
-  const priceOk = form.price > 0
-  const stockVal = Number((form as any).stock ?? 0)
-  const stockOk = stockVal >= 0
-
-  if (!nameOk || !priceOk || !stockOk) {
-    errorMessage.value = 'Please fill in required fields: Name, Price (>0), Quantity (>=0)'
-    return
-  }
-
-  if (editingId.value == null) {
-    const barcode = form.barcode || String(100000000000 + Math.floor(Math.random() * 900000000000))
-    store.add({
-      name: form.name.trim(),
-      price: form.price,
-      image: form.image,
-      barcode,
-      stock: stockVal,
-    })
-  } else {
-    store.update(editingId.value, {
-      name: form.name.trim(),
-      price: form.price,
-      image: form.image,
-      barcode: form.barcode,
-      stock: stockVal,
-    })
-  }
-
-  resetForm()
-}
-
-function edit(p: Product) {
-  editingId.value = p.id
-  form.name = p.name
-  form.price = p.price
-  form.image = p.image
-  form.barcode = p.barcode
-  ;(form as any).stock = p.stock
-}
-
-function remove(id: number) {
-  store.remove(id)
-  if (editingId.value === id) resetForm()
-}
-
-function generateBarcode() {
-  form.barcode = String(100000000000 + Math.floor(Math.random() * 900000000000))
-}
-</script>
-
 <template>
   <div class="space-y-6">
 
@@ -244,6 +152,99 @@ function generateBarcode() {
 
   </div>
 </template>
+
+
+<script setup lang="ts">
+import { computed, reactive, ref } from 'vue'
+import { useProductsStore, type Product } from '@/store/products'
+import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
+
+const store = useProductsStore()
+const query = ref('')
+
+const form = reactive<Omit<Product, 'id'>>({
+  name: '',
+  price: 0,
+  image: 'https://via.placeholder.com/100',
+  barcode: '',
+  stock: 0,
+})
+
+const errorMessage = ref('')
+const editingId = ref<number | null>(null)
+
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return store.products
+  return store.products.filter((p) =>
+    p.name.toLowerCase().includes(q) ||
+    p.barcode.includes(q)
+  )
+})
+
+function resetForm() {
+  form.name = ''
+  form.price = 0
+  form.image = 'https://via.placeholder.com/100'
+  form.barcode = ''
+  ;(form as any).stock = 0
+  editingId.value = null
+  errorMessage.value = ''
+}
+
+function save() {
+  errorMessage.value = ''
+
+  const nameOk = !!form.name.trim()
+  const priceOk = form.price > 0
+  const stockVal = Number((form as any).stock ?? 0)
+  const stockOk = stockVal >= 0
+
+  if (!nameOk || !priceOk || !stockOk) {
+    errorMessage.value = 'Please fill in required fields: Name, Price (>0), Quantity (>=0)'
+    return
+  }
+
+  if (editingId.value == null) {
+    const barcode = form.barcode || String(100000000000 + Math.floor(Math.random() * 900000000000))
+    store.add({
+      name: form.name.trim(),
+      price: form.price,
+      image: form.image,
+      barcode,
+      stock: stockVal,
+    })
+  } else {
+    store.update(editingId.value, {
+      name: form.name.trim(),
+      price: form.price,
+      image: form.image,
+      barcode: form.barcode,
+      stock: stockVal,
+    })
+  }
+
+  resetForm()
+}
+
+function edit(p: Product) {
+  editingId.value = p.id
+  form.name = p.name
+  form.price = p.price
+  form.image = p.image
+  form.barcode = p.barcode
+  ;(form as any).stock = p.stock
+}
+
+function remove(id: number) {
+  store.remove(id)
+  if (editingId.value === id) resetForm()
+}
+
+function generateBarcode() {
+  form.barcode = String(100000000000 + Math.floor(Math.random() * 900000000000))
+}
+</script>
 
 <style scoped>
 </style>

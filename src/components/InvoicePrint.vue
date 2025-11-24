@@ -1,60 +1,3 @@
-<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
-
-type DiscountMode = 'flat' | 'percent'
-
-const props = defineProps<{
-  shopName?: string
-  shopLogoUrl?: string
-  invoiceNumber: string
-  datetime: string
-  items: { name: string; quantity: number; unitPrice: number; lineDiscount: number; lineTotal: number }[]
-  subtotal: number
-  productDiscountTotal: number
-  invoiceDiscountMode: DiscountMode
-  invoiceDiscountValue: number
-  invoiceDiscountAmount: number
-  total: number
-  paymentType: string
-  cashier: string
-  customerName?: string
-}>()
-
-const grandTotal = computed(() => props.total)
-
-onMounted(() => {
-  // ensure barcode is rendered before PDF export
-})
-
-defineExpose({
-  async getBarcodePngDataUrl(): Promise<string | undefined> {
-    const svgElement = document.querySelector('#invoice-print svg') as SVGSVGElement | null
-    if (!svgElement) return
-    const svgData = new XMLSerializer().serializeToString(svgElement)
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(svgBlob)
-    const img = new Image()
-    const dataUrl: string = await new Promise((resolve) => {
-      img.onload = function () {
-        const canvas = document.createElement('canvas')
-        canvas.width = (svgElement as any).width?.baseVal?.value || 300
-        canvas.height = (svgElement as any).height?.baseVal?.value || 80
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = '#fff'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(img, 0, 0)
-        const url = canvas.toDataURL('image/png')
-        resolve(url)
-      }
-      img.src = url
-    })
-    URL.revokeObjectURL(url)
-    return dataUrl
-  }
-})
-</script>
-
 <template>
   <div id="invoice-print" class="mx-auto w-full max-w-2xl rounded-lg bg-white p-6 text-slate-100 print:rounded-none print:p-0">
     <div class="flex items-center gap-3 border-b pb-4">
@@ -126,6 +69,65 @@ defineExpose({
     <div class="mt-6 text-center text-sm text-slate-300">Thank you for your purchase!</div>
   </div>
 </template>
+
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
+
+type DiscountMode = 'flat' | 'percent'
+
+const props = defineProps<{
+  shopName?: string
+  shopLogoUrl?: string
+  invoiceNumber: string
+  datetime: string
+  items: { name: string; quantity: number; unitPrice: number; lineDiscount: number; lineTotal: number }[]
+  subtotal: number
+  productDiscountTotal: number
+  invoiceDiscountMode: DiscountMode
+  invoiceDiscountValue: number
+  invoiceDiscountAmount: number
+  total: number
+  paymentType: string
+  cashier: string
+  customerName?: string
+}>()
+
+const grandTotal = computed(() => props.total)
+
+onMounted(() => {
+  // ensure barcode is rendered before PDF export
+})
+
+defineExpose({
+  async getBarcodePngDataUrl(): Promise<string | undefined> {
+    const svgElement = document.querySelector('#invoice-print svg') as SVGSVGElement | null
+    if (!svgElement) return
+    const svgData = new XMLSerializer().serializeToString(svgElement)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    const img = new Image()
+    const dataUrl: string = await new Promise((resolve) => {
+      img.onload = function () {
+        const canvas = document.createElement('canvas')
+        canvas.width = (svgElement as any).width?.baseVal?.value || 300
+        canvas.height = (svgElement as any).height?.baseVal?.value || 80
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = '#fff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0)
+        const url = canvas.toDataURL('image/png')
+        resolve(url)
+      }
+      img.src = url
+    })
+    URL.revokeObjectURL(url)
+    return dataUrl
+  }
+})
+</script>
+
 
 <style scoped>
 @media print {

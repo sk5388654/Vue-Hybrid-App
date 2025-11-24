@@ -1,31 +1,3 @@
-<script setup lang="ts">
-type DiscountMode = 'flat' | 'percent'
-
-type CartItem = {
-  id: number
-  name: string
-  gross: number
-  lineDiscount: number
-  lineTotal: number
-  quantity: number
-}
-
-const props = defineProps<{
-  items: CartItem[]
-  subtotal: number
-  productDiscountTotal: number
-  invoiceDiscountMode: DiscountMode
-  invoiceDiscountValue: number
-  invoiceDiscountAmount: number
-  grandTotal: number
-}>()
-
-const emit = defineEmits<{
-  (e: 'confirm'): void
-  (e: 'cancel'): void
-}>()
-</script>
-
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
     <div class="w-full max-w-lg rounded-lg dark-panel">
@@ -78,6 +50,36 @@ const emit = defineEmits<{
     </div>
   </div>
 </template>
+
+
+<script setup lang="ts">
+type DiscountMode = 'flat' | 'percent'
+
+type CartItem = {
+  id: number
+  name: string
+  gross: number
+  lineDiscount: number
+  lineTotal: number
+  quantity: number
+}
+
+const props = defineProps<{
+  items: CartItem[]
+  subtotal: number
+  productDiscountTotal: number
+  invoiceDiscountMode: DiscountMode
+  invoiceDiscountValue: number
+  invoiceDiscountAmount: number
+  grandTotal: number
+}>()
+
+const emit = defineEmits<{
+  (e: 'confirm'): void
+  (e: 'cancel'): void
+}>()
+</script>
+
 
 <style scoped>
 </style>

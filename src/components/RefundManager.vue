@@ -1,244 +1,3 @@
-<script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import RefundReceiptModal from './RefundReceiptModal.vue'
-import ExchangeModal from './ExchangeModal.vue'
-import { useSalesStore } from '@/store/sales'
-import { useRefundsStore, type RefundRecord, type RefundType } from '@/store/refunds'
-import { useProductsStore } from '@/store/products'
-import { useRefunds } from '@/composables/useRefunds'
-
-const route = useRoute()
-const router = useRouter()
-const salesStore = useSalesStore()
-const refundsStore = useRefundsStore()
-const productsStore = useProductsStore()
-
-const {
-  state,
-  sale,
-  existingRefunds,
-  refundableItems,
-  summary,
-  error,
-  success,
-  selectSale,
-  setRefundType,
-  setReturnQuantity,
-  setExchangeNewQuantity,
-  processRefund,
-  processExchangeRefund,
-  resetState,
-  autoSelectFullReturn,
-} = useRefunds()
-
-const invoiceQuery = ref('')
-const showDropdown = ref(false)
-const dropdownRef = ref<HTMLDivElement | null>(null)
-const showReceiptModal = ref(false)
-const showExchangeModal = ref(false)
-const processedRefund = ref<RefundRecord | null>(null)
-const isConfirming = ref(false)
-
-const saleOptions = computed(() =>
-  [...salesStore.sales].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()),
-)
-
-const filteredSales = computed(() => {
-  const query = invoiceQuery.value.trim().toLowerCase()
-  if (!query) return saleOptions.value
-  return saleOptions.value.filter((sale) => {
-    const invoiceMatch = sale.invoiceNumber.toLowerCase().includes(query)
-    const customerMatch = sale.customerName?.toLowerCase().includes(query)
-    const itemMatch = sale.items.some((item) => item.name.toLowerCase().includes(query))
-    return invoiceMatch || customerMatch || itemMatch
-  })
-})
-
-const refundTypeOptions: { label: string; value: RefundType }[] = [
-  { label: 'Full Return', value: 'full_return' },
-  { label: 'Partial Return', value: 'partial_return' },
-  { label: 'Exchange', value: 'exchange' },
-  { label: 'Cash Refund', value: 'cash_refund' },
-]
-
-const refundType = computed({
-  get: () => state.refundType,
-  set: (val: RefundType) => setRefundType(val),
-})
-
-const refundReason = computed({
-  get: () => state.reason,
-  set: (val: string) => {
-    state.reason = val
-  },
-})
-
-const canSubmit = computed(() => {
-  if (!sale.value) return false
-  if (state.isProcessing) return false
-  switch (state.refundType) {
-    case 'full_return':
-      return state.returnQuantities.size > 0
-    case 'partial_return':
-    case 'cash_refund':
-      return state.returnQuantities.size > 0
-    case 'exchange':
-      return state.exchangeReturnQuantities.size > 0 && state.exchangeNewQuantities.size > 0
-    default:
-      return false
-  }
-})
-
-const refundsList = computed(() => refundsStore.refundsForCurrentStore.slice().reverse())
-
-function closeDropdown(e?: MouseEvent) {
-  if (!dropdownRef.value) return
-  if (e && dropdownRef.value.contains(e.target as Node)) return
-  showDropdown.value = false
-}
-
-function handleSelectSale(id: string) {
-  selectSale(id)
-  const invoice = saleOptions.value.find((s) => s.id === id)
-  invoiceQuery.value = invoice?.invoiceNumber ?? ''
-  showDropdown.value = false
-}
-
-function handleQuantityInput(productId: number, value: string) {
-  const numeric = Number(value)
-  if (Number.isNaN(numeric)) return
-  setReturnQuantity(productId, numeric)
-}
-
-function handleExchangeQuantity(productId: number, value: string) {
-  const numeric = Number(value)
-  if (Number.isNaN(numeric)) return
-  setReturnQuantity(productId, numeric)
-}
-
-function handleExchangeNewQuantity(productId: number, value: string) {
-  const numeric = Number(value)
-  if (Number.isNaN(numeric)) return
-  setExchangeNewQuantity(productId, numeric)
-}
-
-function resetForm() {
-  invoiceQuery.value = ''
-  processedRefund.value = null
-  showReceiptModal.value = false
-  resetState()
-}
-
-function confirmMessage(): string {
-  if (!sale.value) return 'Confirm refund?'
-  const invoice = sale.value.invoiceNumber
-  if (state.refundType === 'exchange') {
-    if (summary.value.balanceToCustomer > 0) {
-      return `Confirm exchange for invoice #${invoice}? Refund ₹${summary.value.balanceToCustomer.toFixed(2)} to customer.`
-    }
-    if (summary.value.balanceFromCustomer > 0) {
-      return `Confirm exchange for invoice #${invoice}? Customer must pay ₹${summary.value.balanceFromCustomer.toFixed(2)}.`
-    }
-    return `Confirm exchange for invoice #${invoice}?`
-  }
-  return `Are you sure you want to refund ${summary.value.totalReturnQuantity} item(s) from invoice #${invoice}?`
-}
-
-async function submitRefund() {
-  if (!canSubmit.value || isConfirming.value) return
-  const ok = window.confirm(confirmMessage())
-  if (!ok) return
-  isConfirming.value = true
-  const result = await processRefund()
-  if (result?.refundRecord) {
-    processedRefund.value = result.refundRecord
-    showReceiptModal.value = true
-    selectSale(result.refundRecord.saleId)
-    success.value = result.message
-  }
-  isConfirming.value = false
-}
-
-function handleReceiptClose() {
-  showReceiptModal.value = false
-  processedRefund.value = null
-}
-
-function openExchangeModal() {
-  if (!sale.value) {
-    error.value = 'Please select an invoice first.'
-    return
-  }
-  showExchangeModal.value = true
-}
-
-function handleExchangeConfirm(data: {
-  returnedItems: any[]
-  exchangedItems: any[]
-  refundReason: string
-  refundMethod: 'cash' | 'store_credit' | 'wallet'
-  paymentType: 'cash' | 'card' | 'mobile'
-}) {
-  isConfirming.value = true
-  processExchangeRefund(
-    data.returnedItems,
-    data.exchangedItems,
-    data.refundReason || undefined,
-    data.refundMethod,
-    data.paymentType
-  ).then((result) => {
-    if (result?.success) {
-      // Find the refund record that was created
-      refundsStore.load()
-      const latestRefund = refundsStore.refundsForCurrentStore
-        .filter((r) => r.saleId === sale.value?.id)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-      
-      if (latestRefund) {
-        processedRefund.value = latestRefund
-        showReceiptModal.value = true
-      }
-      showExchangeModal.value = false
-    }
-    isConfirming.value = false
-  })
-}
-
-function handleExchangeClose() {
-  showExchangeModal.value = false
-}
-
-function prefillFromRoute() {
-  const invoiceId = route.query.invoice as string | undefined
-  if (!invoiceId) return
-  const match = salesStore.sales.find((sale) => sale.invoiceNumber === invoiceId || sale.id === invoiceId)
-  if (match) {
-    handleSelectSale(match.id)
-    autoSelectFullReturn()
-  }
-}
-
-onMounted(() => {
-  salesStore.load()
-  productsStore.load()
-  refundsStore.load()
-  document.addEventListener('click', closeDropdown)
-  // Clear invoice query on mount (refresh)
-  invoiceQuery.value = ''
-  prefillFromRoute()
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', closeDropdown)
-})
-
-watch(
-  () => route.query.invoice,
-  () => prefillFromRoute(),
-)
-</script>
-
 <template>
   <div class="space-y-6">
     <!-- Steps -->
@@ -575,11 +334,246 @@ watch(
     @confirm="handleExchangeConfirm"
   />
 </template>
+<script setup lang="ts">
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import RefundReceiptModal from './RefundReceiptModal.vue'
+import ExchangeModal from './ExchangeModal.vue'
+import { useSalesStore } from '@/store/sales'
+import { useRefundsStore, type RefundRecord, type RefundType } from '@/store/refunds'
+import { useProductsStore } from '@/store/products'
+import { useRefunds } from '@/composables/useRefunds'
+
+const route = useRoute()
+const router = useRouter()
+const salesStore = useSalesStore()
+const refundsStore = useRefundsStore()
+const productsStore = useProductsStore()
+
+const {
+  state,
+  sale,
+  existingRefunds,
+  refundableItems,
+  summary,
+  error,
+  success,
+  selectSale,
+  setRefundType,
+  setReturnQuantity,
+  setExchangeNewQuantity,
+  processRefund,
+  processExchangeRefund,
+  resetState,
+  autoSelectFullReturn,
+} = useRefunds()
+
+const invoiceQuery = ref('')
+const showDropdown = ref(false)
+const dropdownRef = ref<HTMLDivElement | null>(null)
+const showReceiptModal = ref(false)
+const showExchangeModal = ref(false)
+const processedRefund = ref<RefundRecord | null>(null)
+const isConfirming = ref(false)
+
+const saleOptions = computed(() =>
+  [...salesStore.sales].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()),
+)
+
+const filteredSales = computed(() => {
+  const query = invoiceQuery.value.trim().toLowerCase()
+  if (!query) return saleOptions.value
+  return saleOptions.value.filter((sale) => {
+    const invoiceMatch = sale.invoiceNumber.toLowerCase().includes(query)
+    const customerMatch = sale.customerName?.toLowerCase().includes(query)
+    const itemMatch = sale.items.some((item) => item.name.toLowerCase().includes(query))
+    return invoiceMatch || customerMatch || itemMatch
+  })
+})
+
+const refundTypeOptions: { label: string; value: RefundType }[] = [
+  { label: 'Full Return', value: 'full_return' },
+  { label: 'Partial Return', value: 'partial_return' },
+  { label: 'Exchange', value: 'exchange' },
+  { label: 'Cash Refund', value: 'cash_refund' },
+]
+
+const refundType = computed({
+  get: () => state.refundType,
+  set: (val: RefundType) => setRefundType(val),
+})
+
+const refundReason = computed({
+  get: () => state.reason,
+  set: (val: string) => {
+    state.reason = val
+  },
+})
+
+const canSubmit = computed(() => {
+  if (!sale.value) return false
+  if (state.isProcessing) return false
+  switch (state.refundType) {
+    case 'full_return':
+      return state.returnQuantities.size > 0
+    case 'partial_return':
+    case 'cash_refund':
+      return state.returnQuantities.size > 0
+    case 'exchange':
+      return state.exchangeReturnQuantities.size > 0 && state.exchangeNewQuantities.size > 0
+    default:
+      return false
+  }
+})
+
+const refundsList = computed(() => refundsStore.refundsForCurrentStore.slice().reverse())
+
+function closeDropdown(e?: MouseEvent) {
+  if (!dropdownRef.value) return
+  if (e && dropdownRef.value.contains(e.target as Node)) return
+  showDropdown.value = false
+}
+
+function handleSelectSale(id: string) {
+  selectSale(id)
+  const invoice = saleOptions.value.find((s) => s.id === id)
+  invoiceQuery.value = invoice?.invoiceNumber ?? ''
+  showDropdown.value = false
+}
+
+function handleQuantityInput(productId: number, value: string) {
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return
+  setReturnQuantity(productId, numeric)
+}
+
+function handleExchangeQuantity(productId: number, value: string) {
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return
+  setReturnQuantity(productId, numeric)
+}
+
+function handleExchangeNewQuantity(productId: number, value: string) {
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return
+  setExchangeNewQuantity(productId, numeric)
+}
+
+function resetForm() {
+  invoiceQuery.value = ''
+  processedRefund.value = null
+  showReceiptModal.value = false
+  resetState()
+}
+
+function confirmMessage(): string {
+  if (!sale.value) return 'Confirm refund?'
+  const invoice = sale.value.invoiceNumber
+  if (state.refundType === 'exchange') {
+    if (summary.value.balanceToCustomer > 0) {
+      return `Confirm exchange for invoice #${invoice}? Refund ₹${summary.value.balanceToCustomer.toFixed(2)} to customer.`
+    }
+    if (summary.value.balanceFromCustomer > 0) {
+      return `Confirm exchange for invoice #${invoice}? Customer must pay ₹${summary.value.balanceFromCustomer.toFixed(2)}.`
+    }
+    return `Confirm exchange for invoice #${invoice}?`
+  }
+  return `Are you sure you want to refund ${summary.value.totalReturnQuantity} item(s) from invoice #${invoice}?`
+}
+
+async function submitRefund() {
+  if (!canSubmit.value || isConfirming.value) return
+  const ok = window.confirm(confirmMessage())
+  if (!ok) return
+  isConfirming.value = true
+  const result = await processRefund()
+  if (result?.refundRecord) {
+    processedRefund.value = result.refundRecord
+    showReceiptModal.value = true
+    selectSale(result.refundRecord.saleId)
+    success.value = result.message
+  }
+  isConfirming.value = false
+}
+
+function handleReceiptClose() {
+  showReceiptModal.value = false
+  processedRefund.value = null
+}
+
+function openExchangeModal() {
+  if (!sale.value) {
+    error.value = 'Please select an invoice first.'
+    return
+  }
+  showExchangeModal.value = true
+}
+
+function handleExchangeConfirm(data: {
+  returnedItems: any[]
+  exchangedItems: any[]
+  refundReason: string
+  refundMethod: 'cash' | 'store_credit' | 'wallet'
+  paymentType: 'cash' | 'card' | 'mobile'
+}) {
+  isConfirming.value = true
+  processExchangeRefund(
+    data.returnedItems,
+    data.exchangedItems,
+    data.refundReason || undefined,
+    data.refundMethod,
+    data.paymentType
+  ).then((result) => {
+    if (result?.success) {
+      refundsStore.load()
+      const latestRefund = refundsStore.refundsForCurrentStore
+        .filter((r) => r.saleId === sale.value?.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+      
+      if (latestRefund) {
+        processedRefund.value = latestRefund
+        showReceiptModal.value = true
+      }
+      showExchangeModal.value = false
+    }
+    isConfirming.value = false
+  })
+}
+
+function handleExchangeClose() {
+  showExchangeModal.value = false
+}
+
+function prefillFromRoute() {
+  const invoiceId = route.query.invoice as string | undefined
+  if (!invoiceId) return
+  const match = salesStore.sales.find((sale) => sale.invoiceNumber === invoiceId || sale.id === invoiceId)
+  if (match) {
+    handleSelectSale(match.id)
+    autoSelectFullReturn()
+  }
+}
+
+onMounted(() => {
+  salesStore.load()
+  productsStore.load()
+  refundsStore.load()
+  document.addEventListener('click', closeDropdown)
+  invoiceQuery.value = ''
+  prefillFromRoute()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeDropdown)
+})
+
+watch(
+  () => route.query.invoice,
+  () => prefillFromRoute(),
+)
+</script>
 
 <style>
-/* Theme-aware overrides for RefundManager. Use CSS variables defined in `src/assets/main.css` so
-  these rules follow the `:root` / `:root.dark` semantic variables rather than relying on
-  Tailwind's `dark:` utilities (which may be configured for media queries). */
 .refund-history { color: var(--text-primary); }
 .refund-history .title { color: var(--text-primary); }
 .refund-history .subtitle,
@@ -591,19 +585,10 @@ watch(
 .invoice-dropdown .payment-type { color: var(--text-secondary); }
 .invoice-dropdown .inv-date { color: var(--text-primary); font-size: 0.78rem; }
 .invoice-dropdown .inv-number { color: var(--text-primary); }
-
-/* Hover style: use semantic hover color when available, fallback to subtle tint.
-   This avoids Tailwind's `hover:bg-blue-50` making a bright white hover in dark mode. */
 .invoice-dropdown button:hover {
   background: var(--hover-bg, rgba(0,0,0,0.04));
   color: var(--text-primary);
 }
 
-/* Make sure list separators remain subtle in both themes */
 .refund-history ul li { border-color: rgba(255,255,255,0.03); }
-</style>
-
-<style scoped>
-/* If you want to centralize dark colors later, create utility classes (dark-panel, etc.) in a global stylesheet.
-  For now we've used inline utility classes to ensure dark mode correctness everywhere. */
 </style>

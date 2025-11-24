@@ -1,66 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-
-type DiscountMode = 'flat' | 'percent'
-
-type CartItem = {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  stock: number
-  image: string
-  discountMode: DiscountMode
-  discountValue: number
-  gross: number
-  lineDiscount: number
-  lineTotal: number
-}
-
-const props = defineProps<{
-  items: CartItem[]
-  subtotal: number
-  invoiceDiscountMode: DiscountMode
-  invoiceDiscountValue: number
-  invoiceDiscountAmount: number
-  grandTotal: number
-  selectedId: number | null
-  disabled?: boolean
-}>()
-
-const emit = defineEmits<{
-  (e: 'updateQty', id: number, quantity: number): void
-  (e: 'remove', id: number): void
-  (e: 'checkout'): void
-  (e: 'hold'): void
-  (e: 'select', id: number): void
-  (e: 'updateItemDiscount', payload: { id: number; mode?: DiscountMode; value?: number }): void
-  (e: 'updateInvoiceDiscountMode', mode: DiscountMode): void
-  (e: 'updateInvoiceDiscountValue', value: number): void
-}>()
-
-const isEmpty = computed(() => props.items.length === 0)
-
-function onItemModeChange(id: number, mode: string) {
-  emit('updateItemDiscount', { id, mode: mode as DiscountMode })
-}
-
-function onItemDiscountValue(id: number, value: string) {
-  const parsed = Number(value)
-  emit('updateItemDiscount', { id, value: Number.isNaN(parsed) ? 0 : parsed })
-}
-
-function onInvoiceModeChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value as DiscountMode
-  emit('updateInvoiceDiscountMode', value)
-}
-
-function onInvoiceValueChange(event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  emit('updateInvoiceDiscountValue', Number.isNaN(value) ? 0 : value)
-}
-</script>
-
 <template>
   <div class="rounded-lg p-4 dark-panel">
     <h2 class="mb-4 text-lg font-semibold text-slate-100">Cart</h2>
@@ -192,6 +129,69 @@ function onInvoiceValueChange(event: Event) {
     </button>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+
+type DiscountMode = 'flat' | 'percent'
+
+type CartItem = {
+  id: number
+  name: string
+  price: number
+  quantity: number
+  stock: number
+  image: string
+  discountMode: DiscountMode
+  discountValue: number
+  gross: number
+  lineDiscount: number
+  lineTotal: number
+}
+
+const props = defineProps<{
+  items: CartItem[]
+  subtotal: number
+  invoiceDiscountMode: DiscountMode
+  invoiceDiscountValue: number
+  invoiceDiscountAmount: number
+  grandTotal: number
+  selectedId: number | null
+  disabled?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'updateQty', id: number, quantity: number): void
+  (e: 'remove', id: number): void
+  (e: 'checkout'): void
+  (e: 'hold'): void
+  (e: 'select', id: number): void
+  (e: 'updateItemDiscount', payload: { id: number; mode?: DiscountMode; value?: number }): void
+  (e: 'updateInvoiceDiscountMode', mode: DiscountMode): void
+  (e: 'updateInvoiceDiscountValue', value: number): void
+}>()
+
+const isEmpty = computed(() => props.items.length === 0)
+
+function onItemModeChange(id: number, mode: string) {
+  emit('updateItemDiscount', { id, mode: mode as DiscountMode })
+}
+
+function onItemDiscountValue(id: number, value: string) {
+  const parsed = Number(value)
+  emit('updateItemDiscount', { id, value: Number.isNaN(parsed) ? 0 : parsed })
+}
+
+function onInvoiceModeChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value as DiscountMode
+  emit('updateInvoiceDiscountMode', value)
+}
+
+function onInvoiceValueChange(event: Event) {
+  const value = Number((event.target as HTMLInputElement).value)
+  emit('updateInvoiceDiscountValue', Number.isNaN(value) ? 0 : value)
+}
+</script>
 
 <style scoped>
 </style>

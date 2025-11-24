@@ -1,10 +1,153 @@
-<!--
-Changes: Make sidebar responsive.
-- Desktop (lg+): full sidebar with icons + labels (unchanged visually).
-- Tablet (md): icons-only vertical bar (narrow width) with tooltips.
-- Mobile (sm): hidden by default; hamburger toggles slide-in sidebar with overlay.
-Only layout/UX changes added; business logic untouched.
--->
+
+
+<template>
+  <aside
+    class="hidden md:flex md:flex-col sticky top-0 h-screen px-4 py-6 backdrop-blur transition-all duration-300 dark-sidebar md:w-20 lg:w-72"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
+  >
+      <div class="flex items-center justify-between gap-2 px-2">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">POS</span>
+          <div class="text-lg font-semibold hidden lg:block">Shop Suite</div>
+        </div>
+
+        <div class="flex items-center gap-2">
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-2xl p-3 dark-panel transparent-panel relative">
+        <div class="subtle-label hidden lg:block">Store</div>
+
+        <!-- full store selector only on large screens -->
+        <div class="hidden lg:block">
+          <select
+            v-model="currentStoreId"
+            :disabled="!isAdmin"
+            class="mt-2 w-full rounded-2xl input-field"
+          >
+            <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
+          </select>
+          <div v-if="isAdmin" class="mt-3 flex gap-2">
+            <button class="btn-ghost flex-1 py-1 text-xs" @click="showAdd = true">Add</button>
+            <button class="btn-danger flex-1 py-1 text-xs" @click="deleteStore">Delete</button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-center md:flex lg:hidden">
+          <button
+            class="sidebar-toggle"
+            disabled
+            aria-disabled="true"
+            title="Store selection disabled in compact mode"
+            aria-label="Select store (disabled)"
+          >
+            <span class="font-semibold text-sm">{{ (stores.find(s => s.id === currentStoreId) || { name: 'S' }).name.charAt(0) }}</span>
+          </button>
+        </div>
+      </div>
+
+    <nav class="mt-6 flex-1 space-y-1">
+      <RouterLink
+        v-for="item in navItems"
+        :key="item.to"
+        :to="item.to"
+        :title="item.label"
+        :class="[
+          'menu-item flex items-center gap-3 rounded-2xl transition',
+          route.path.startsWith(item.to) ? 'active' : '',
+          'md:justify-center md:px-0 md:py-2 lg:justify-start lg:px-3 lg:py-3'
+        ]"
+      >
+        <template v-if="item.iconIsFa">
+          <FontAwesomeIcon :icon="['fas', item.icon]" class="h-5 w-5 flex-shrink-0 text-black dark:text-white" />
+        </template>
+        <template v-else>
+          <svg class="h-5 w-5 flex-shrink-0 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+            <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </template>
+        <span class="ml-2 hidden lg:inline">{{ item.label }}</span>
+      </RouterLink>
+    </nav>
+
+    <div class="mt-auto rounded-2xl p-3 dark-panel transparent-panel text-sm">
+      <div class="hidden lg:block">
+        <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
+        <div class="font-semibold">{{ auth.user?.displayName }}</div>
+        <button
+          class="mt-3 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-300 hover:bg-[rgba(255,255,255,0.02)]"
+          @click="$router.push('/login'); auth.logout()"
+        >
+          Logout
+        </button>
+      </div>
+      <div class="flex items-center justify-center md:flex lg:hidden">
+        <button
+          class="sidebar-toggle"
+          @click="$router.push('/login'); auth.logout(); closeSidebar()"
+          aria-label="Logout"
+          title="Logout"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <teleport to="body">
+      <div v-show="sidebarOpen" class="fixed inset-0 z-50 md:hidden">
+        <div class="absolute inset-0 bg-black/40" @click="closeSidebar" aria-hidden="true"></div>
+        <aside
+          class="relative z-50 h-full w-4/5 max-w-xs transform transition-transform duration-300 dark-sidebar pb-6"
+          :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+          role="dialog"
+          id="mobile-sidebar"
+          aria-modal="true"
+        >
+          <div class="flex items-center justify-between p-4 border-b">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">POS</span>
+              <div class="text-lg font-semibold">Shop Suite</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="p-2" @click="closeSidebar" aria-label="Close menu">✕</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col h-full">
+            <div class="p-4 overflow-y-auto flex-1">
+              <div class="mb-4">
+                <select v-model="currentStoreId" :disabled="!isAdmin" class="w-full rounded-md input-field" @change="closeSidebar">
+                  <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <div v-if="isAdmin" class="mt-2 flex gap-2">
+                  <button class="btn-ghost flex-1 py-1 text-xs" @click="showAdd = true; closeSidebar()">Add</button>
+                  <button class="btn-danger flex-1 py-1 text-xs" @click="deleteStore(); closeSidebar()">Delete</button>
+                </div>
+              </div>
+              <nav class="space-y-2">
+                <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" class="flex items-center gap-3 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800" @click="closeSidebar">
+                  <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                    <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <span class="text-sm font-medium">{{ item.label }}</span>
+                </RouterLink>
+              </nav>
+            </div>
+
+            <div class="p-4 border-t">
+              <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
+              <div class="font-semibold mb-2">{{ auth.user?.displayName }}</div>
+              <button class="mt-2 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100 hover:bg-[rgba(255,255,255,0.02)]" @click="$router.push('/login'); auth.logout(); closeSidebar()">Logout</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </teleport>
+  </aside>
+</template>
 
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -77,11 +220,6 @@ onMounted(() => {
   }
 })
 
-function toggleCollapse() {
-  isCollapsed.value = !isCollapsed.value
-  localStorage.setItem('sidebarCollapsed', isCollapsed.value ? '1' : '0')
-}
-
 const isAdmin = computed(() => auth.isAdmin)
 
 const navItems = computed(() => {
@@ -101,32 +239,7 @@ const navItems = computed(() => {
   ].filter((item) => item.show)
 })
 
-function addStore() {
-  if (!newStoreName.value.trim()) return
-  if (!newStoreUsername.value.trim() || !newStorePassword.value.trim()) {
-    alert('Username and password are required for store creation')
-    return
-  }
-  const id = storesStore.addStore(
-    newStoreName.value.trim(),
-    { username: newStoreUsername.value.trim(), password: newStorePassword.value },
-    auth.user?.username ?? 'admin'
-  )
-  // Show success message instead of switching
-  successMessage.value = `Store "${newStoreName.value.trim()}" has been created successfully!`
-  showSuccess.value = true
-  newStoreName.value = ''
-  newStoreUsername.value = ''
-  newStorePassword.value = ''
-  showAdd.value = false
-  // Auto-hide success message after 3 seconds
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
-}
-
 function deleteStore() {
-  // Use the global confirm from script context. globalThis is safe in all environments.
   if (!globalThis.confirm('Delete current store? This removes its products and sales.')) return
   const id = storesStore.currentStoreId
   const removed = storesStore.deleteStore(id)
@@ -140,11 +253,6 @@ function deleteStore() {
   salesStore.load()
 }
 
-function selectStore(id: string) {
-  currentStoreId.value = id
-  showStoreMenu.value = false
-}
-
 onMounted(() => {
   if (window.innerWidth < 1024) {
     isCollapsed.value = true
@@ -152,161 +260,6 @@ onMounted(() => {
 })
 </script>
 
-<template>
-  <!-- Desktop & Tablet sidebar: visible on md+; md shows narrow icons-only, lg shows full labels -->
-  <aside
-    class="hidden md:flex md:flex-col sticky top-0 h-screen px-4 py-6 backdrop-blur transition-all duration-300 dark-sidebar md:w-20 lg:w-72"
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
-  >
-      <div class="flex items-center justify-between gap-2 px-2">
-        <div class="flex items-center gap-2">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">POS</span>
-          <div class="text-lg font-semibold hidden lg:block">Shop Suite</div>
-        </div>
 
-        <div class="flex items-center gap-2">
-          <!-- Theme toggle moved to Settings -->
-        </div>
-      </div>
-
-      <div class="mt-6 rounded-2xl p-3 dark-panel transparent-panel relative">
-        <div class="subtle-label hidden lg:block">Store</div>
-
-        <!-- full store selector only on large screens -->
-        <div class="hidden lg:block">
-          <select
-            v-model="currentStoreId"
-            :disabled="!isAdmin"
-            class="mt-2 w-full rounded-2xl input-field"
-          >
-            <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
-          <div v-if="isAdmin" class="mt-3 flex gap-2">
-            <button class="btn-ghost flex-1 py-1 text-xs" @click="showAdd = true">Add</button>
-            <button class="btn-danger flex-1 py-1 text-xs" @click="deleteStore">Delete</button>
-          </div>
-        </div>
-
-        <!-- compact store icon for tablet (md) -->
-        <div class="flex items-center justify-center md:flex lg:hidden">
-          <button
-            class="sidebar-toggle"
-            disabled
-            aria-disabled="true"
-            title="Store selection disabled in compact mode"
-            aria-label="Select store (disabled)"
-          >
-            <span class="font-semibold text-sm">{{ (stores.find(s => s.id === currentStoreId) || { name: 'S' }).name.charAt(0) }}</span>
-          </button>
-        </div>
-      </div>
-
-    <nav class="mt-6 flex-1 space-y-1">
-      <RouterLink
-        v-for="item in navItems"
-        :key="item.to"
-        :to="item.to"
-        :title="item.label"
-        :class="[
-          'menu-item flex items-center gap-3 rounded-2xl transition',
-          route.path.startsWith(item.to) ? 'active' : '',
-          'md:justify-center md:px-0 md:py-2 lg:justify-start lg:px-3 lg:py-3'
-        ]"
-      >
-        <template v-if="item.iconIsFa">
-          <FontAwesomeIcon :icon="['fas', item.icon]" class="h-5 w-5 flex-shrink-0 text-black" />
-        </template>
-        <template v-else>
-          <svg class="h-5 w-5 flex-shrink-0 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-            <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </template>
-        <span class="ml-2 hidden lg:inline">{{ item.label }}</span>
-      </RouterLink>
-    </nav>
-
-    <div class="mt-auto rounded-2xl p-3 dark-panel transparent-panel text-sm">
-      <div class="hidden lg:block">
-        <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
-        <div class="font-semibold">{{ auth.user?.displayName }}</div>
-        <button
-          class="mt-3 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-300 hover:bg-[rgba(255,255,255,0.02)]"
-          @click="$router.push('/login'); auth.logout()"
-        >
-          Logout
-        </button>
-      </div>
-      <div class="flex items-center justify-center md:flex lg:hidden">
-        <button
-          class="sidebar-toggle"
-          @click="$router.push('/login'); auth.logout(); closeSidebar()"
-          aria-label="Logout"
-          title="Logout"
-        >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7" />
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mobile slide-in sidebar (teleported to body) -->
-    <teleport to="body">
-      <div v-show="sidebarOpen" class="fixed inset-0 z-50 md:hidden">
-        <div class="absolute inset-0 bg-black/40" @click="closeSidebar" aria-hidden="true"></div>
-        <aside
-          class="relative z-50 h-full w-4/5 max-w-xs transform transition-transform duration-300 dark-sidebar pb-6"
-          :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-          role="dialog"
-          id="mobile-sidebar"
-          aria-modal="true"
-        >
-          <div class="flex items-center justify-between p-4 border-b">
-            <div class="flex items-center gap-3">
-              <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">POS</span>
-              <div class="text-lg font-semibold">Shop Suite</div>
-            </div>
-            <div class="flex items-center gap-2">
-              <!-- Theme toggle moved to Settings -->
-              <button class="p-2" @click="closeSidebar" aria-label="Close menu">✕</button>
-            </div>
-          </div>
-
-          <div class="flex flex-col h-full">
-            <div class="p-4 overflow-y-auto flex-1">
-              <div class="mb-4">
-                <select v-model="currentStoreId" :disabled="!isAdmin" class="w-full rounded-md input-field" @change="closeSidebar">
-                  <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
-                </select>
-                <div v-if="isAdmin" class="mt-2 flex gap-2">
-                  <button class="btn-ghost flex-1 py-1 text-xs" @click="showAdd = true; closeSidebar()">Add</button>
-                  <button class="btn-danger flex-1 py-1 text-xs" @click="deleteStore(); closeSidebar()">Delete</button>
-                </div>
-              </div>
-              <nav class="space-y-2">
-                <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" class="flex items-center gap-3 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800" @click="closeSidebar">
-                  <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                    <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                  <span class="text-sm font-medium">{{ item.label }}</span>
-                </RouterLink>
-              </nav>
-            </div>
-
-            <div class="p-4 border-t">
-              <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
-              <div class="font-semibold mb-2">{{ auth.user?.displayName }}</div>
-              <button class="mt-2 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100 hover:bg-[rgba(255,255,255,0.02)]" @click="$router.push('/login'); auth.logout(); closeSidebar()">Logout</button>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </teleport>
-  </aside>
-</template>
-
-<style scoped>
-
-</style>
+<style scoped></style>
 

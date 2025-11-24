@@ -1,3 +1,37 @@
+<template>
+  <div class="space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">Employee Performance Dashboard</h2>
+    </div>
+
+    <div class="rounded-lg border border-transparent p-4 dark-panel">
+      <table class="w-full text-sm">
+        <thead class="dark-panel text-slate-300">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">Cashier</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Sales (Rs)</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Avg Discount (%)</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Refunds (Rs)</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Refund Count</th>
+            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Hours Logged</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr v-for="r in rows" :key="r.cashier">
+            <td class="px-3 py-2 text-slate-200">{{ r.cashier }}</td>
+            <td class="px-3 py-2 text-right font-medium text-slate-100">₹{{ r.salesTotal.toFixed(2) }}</td>
+            <td class="px-3 py-2 text-right text-slate-300">{{ r.avgDiscountPercent }}%</td>
+            <td class="px-3 py-2 text-right text-slate-300">₹{{ r.refundsAmount.toFixed(2) }}</td>
+            <td class="px-3 py-2 text-right text-slate-300">{{ r.refundsCount }}</td>
+            <td class="px-3 py-2 text-right text-slate-300">{{ r.hours }}h</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useSalesStore } from '@/store/sales'
@@ -19,9 +53,7 @@ onMounted(() => {
   auth.load()
 })
 
-// Build per-cashier metrics
 const cashiers = computed(() => {
-  // find distinct cashier names from sales and refunds and employees
   const names = new Set<string>()
   salesStore.sales.forEach(s => names.add(s.cashier || 'Unknown'))
   refundsStore.refundsForCurrentStore.forEach(r => names.add(r.cashier || 'Unknown'))
@@ -122,38 +154,6 @@ const rows = computed(() => {
 
 </script>
 
-<template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold">Employee Performance Dashboard</h2>
-    </div>
-
-    <div class="rounded-lg border border-transparent p-4 dark-panel">
-      <table class="w-full text-sm">
-        <thead class="dark-panel text-slate-300">
-          <tr>
-            <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide">Cashier</th>
-            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Sales (Rs)</th>
-            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Avg Discount (%)</th>
-            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Refunds (Rs)</th>
-            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Refund Count</th>
-            <th class="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide">Hours Logged</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr v-for="r in rows" :key="r.cashier">
-            <td class="px-3 py-2 text-slate-200">{{ r.cashier }}</td>
-            <td class="px-3 py-2 text-right font-medium text-slate-100">₹{{ r.salesTotal.toFixed(2) }}</td>
-            <td class="px-3 py-2 text-right text-slate-300">{{ r.avgDiscountPercent }}%</td>
-            <td class="px-3 py-2 text-right text-slate-300">₹{{ r.refundsAmount.toFixed(2) }}</td>
-            <td class="px-3 py-2 text-right text-slate-300">{{ r.refundsCount }}</td>
-            <td class="px-3 py-2 text-right text-slate-300">{{ r.hours }}h</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 </style>

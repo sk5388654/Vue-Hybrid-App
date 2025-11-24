@@ -1,297 +1,3 @@
-<script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useSalesStore, type Sale } from '@/store/sales'
-import { useProductsStore } from '@/store/products'
-import { useRefundsStore, type RefundItem } from '@/store/refunds'
-import { calculateExchangeDifference, validateExchange, type ExchangeCalculation } from '@/utils/exchangeProcessor'
-
-const props = defineProps<{
-  originalSale: Sale | null
-  show: boolean
-}>()
-
-const emit = defineEmits<{
-  close: []
-  confirm: [data: {
-    returnedItems: RefundItem[]
-    exchangedItems: RefundItem[]
-    refundReason: string
-    refundMethod: 'cash' | 'store_credit' | 'wallet'
-    paymentType: 'cash' | 'card' | 'mobile'
-  }]
-}>()
-
-const salesStore = useSalesStore()
-const productsStore = useProductsStore()
-const refundsStore = useRefundsStore()
-
-// Step tracking
-const currentStep = ref(1)
-const totalSteps = 5
-
-// Step 1: Select items to return
-const returnQuantities = ref<Map<number, number>>(new Map())
-
-// Step 2: Select items to exchange
-const exchangeQuantities = ref<Map<number, number>>(new Map())
-// Step 2: Discount for new items (per-item discounts)
-const exchangeItemDiscounts = ref<Map<number, { mode: 'flat' | 'percent'; value: number }>>(new Map())
-// Step 2: Global/invoice-level discount for new items
-const exchangeInvoiceDiscount = ref<{ mode: 'flat' | 'percent'; value: number }>({ mode: 'flat', value: 0 })
-
-// Step 3: Review calculation
-const calculation = ref<ExchangeCalculation | null>(null)
-const validation = ref<{ valid: boolean; errors: string[]; warnings: string[] } | null>(null)
-
-// Step 4: Payment/Refund selection
-const refundReason = ref('')
-const refundMethod = ref<'cash' | 'store_credit' | 'wallet'>('cash')
-const paymentType = ref<'cash' | 'card' | 'mobile'>('cash')
-
-// Step 5: Confirmation
-const isProcessing = ref(false)
-
-const refundableItems = computed(() => {
-  if (!props.originalSale) return []
-  const existingRefunds = refundsStore.refundsForSale(props.originalSale.id)
-  const refundedMap = new Map<number, number>()
-  
-  existingRefunds.forEach((refund) => {
-    refund.refundedItems.forEach((item) => {
-      refundedMap.set(item.id, (refundedMap.get(item.id) || 0) + item.quantity)
-    })
-  })
-
-  return props.originalSale.items.map((item) => {
-    const refundedQty = refundedMap.get(item.id) || 0
-    const remainingQty = Math.max(0, item.quantity - refundedQty)
-    return {
-      productId: item.id,
-      name: item.name,
-      purchasedQty: item.quantity,
-      refundedQty,
-      remainingQty,
-      // original unit price before any discounts (stored in sale item as unitPrice)
-      originalUnitPrice: item.unitPrice,
-      // per-unit price actually paid after discounts (lineTotal / quantity)
-      unitPrice: item.lineTotal ? item.lineTotal / item.quantity : item.unitPrice,
-      lineTotal: item.lineTotal ?? (item.unitPrice * item.quantity),
-    }
-  })
-})
-
-const availableProducts = computed(() => {
-  return productsStore.products.filter((p) => (p.stock || 0) > 0)
-})
-
-const returnedItems = computed((): RefundItem[] => {
-  const items: RefundItem[] = []
-  returnQuantities.value.forEach((qty, productId) => {
-    if (qty <= 0) return
-    const item = refundableItems.value.find((it) => it.productId === productId)
-    if (!item) return
-    items.push({
-      id: productId,
-      name: item.name,
-      quantity: qty,
-      unitPrice: item.unitPrice,
-      lineTotal: item.unitPrice * qty,
-    })
-  })
-  return items
-})
-
-const exchangedItems = computed((): RefundItem[] => {
-  const items: RefundItem[] = []
-  const newItemsSubtotal = Array.from(exchangeQuantities.value.entries()).reduce((sum, [productId, qty]) => {
-    if (qty <= 0) return sum
-    const product = productsStore.products.find((p) => p.id === productId)
-    if (!product) return sum
-    return sum + product.price * qty
-  }, 0)
-
-  exchangeQuantities.value.forEach((qty, productId) => {
-    if (qty <= 0) return
-    const product = productsStore.products.find((p) => p.id === productId)
-    if (!product) return
-
-    // Calculate per-item discount
-    const discount = exchangeItemDiscounts.value.get(productId) || { mode: 'flat', value: 0 }
-    const grossLineTotal = product.price * qty
-    let itemDiscount = 0
-    if (discount.mode === 'percent') {
-      itemDiscount = (grossLineTotal * Math.min(discount.value, 100)) / 100
-    } else {
-      itemDiscount = Math.min(discount.value, grossLineTotal)
-    }
-    const afterItemDiscount = Math.max(0, grossLineTotal - itemDiscount)
-
-    // Calculate proportional invoice-level discount
-    let invoiceDiscount = 0
-    if (newItemsSubtotal > 0 && (exchangeInvoiceDiscount.value.mode || exchangeInvoiceDiscount.value.value > 0)) {
-      const proportion = grossLineTotal / newItemsSubtotal
-      if (exchangeInvoiceDiscount.value.mode === 'percent') {
-        invoiceDiscount = (afterItemDiscount * Math.min(exchangeInvoiceDiscount.value.value, 100)) / 100
-      } else {
-        invoiceDiscount = (exchangeInvoiceDiscount.value.value * proportion)
-      }
-    }
-
-    const netLineTotal = Math.max(0, afterItemDiscount - invoiceDiscount)
-    const netUnitPrice = qty > 0 ? netLineTotal / qty : 0
-
-    items.push({
-      id: productId,
-      name: product.name,
-      quantity: qty,
-      unitPrice: netUnitPrice,
-      lineTotal: netLineTotal,
-    })
-  })
-  return items
-})
-
-// Watch for changes to recalculate
-watch([returnQuantities, exchangeQuantities, exchangeItemDiscounts, exchangeInvoiceDiscount], () => {
-  if (returnedItems.value.length > 0 && exchangedItems.value.length > 0) {
-    calculation.value = calculateExchangeDifference(returnedItems.value, exchangedItems.value)
-    validation.value = validateExchange(props.originalSale, returnedItems.value, exchangedItems.value, productsStore)
-  } else {
-    calculation.value = null
-    validation.value = null
-  }
-}, { deep: true })
-
-function setReturnQuantity(productId: number, qty: number) {
-  const item = refundableItems.value.find((it) => it.productId === productId)
-  if (!item) return
-  const safeQty = Math.min(Math.max(qty, 0), item.remainingQty)
-  if (safeQty <= 0) {
-    returnQuantities.value.delete(productId)
-  } else {
-    returnQuantities.value.set(productId, safeQty)
-  }
-}
-
-function setExchangeQuantity(productId: number, qty: number) {
-  const product = productsStore.products.find((p) => p.id === productId)
-  if (!product) return
-  const safeQty = Math.min(Math.max(qty, 0), product.stock || 0)
-  if (safeQty <= 0) {
-    exchangeQuantities.value.delete(productId)
-    exchangeItemDiscounts.value.delete(productId)
-  } else {
-    exchangeQuantities.value.set(productId, safeQty)
-  }
-}
-
-function setExchangeItemDiscount(productId: number, mode: 'flat' | 'percent', value: number) {
-  const qty = exchangeQuantities.value.get(productId)
-  if (!qty || qty <= 0) return
-  
-  const product = productsStore.products.find((p) => p.id === productId)
-  if (!product) return
-
-  const grossLineTotal = product.price * qty
-  let safeValue = Math.max(value, 0)
-  
-  if (mode === 'percent') {
-    safeValue = Math.min(safeValue, 100)
-  } else {
-    safeValue = Math.min(safeValue, grossLineTotal)
-  }
-
-  if (safeValue <= 0) {
-    exchangeItemDiscounts.value.delete(productId)
-  } else {
-    exchangeItemDiscounts.value.set(productId, { mode, value: safeValue })
-  }
-}
-
-function setExchangeInvoiceDiscount(mode: 'flat' | 'percent', value: number) {
-  let safeValue = Math.max(value, 0)
-  
-  if (mode === 'percent') {
-    safeValue = Math.min(safeValue, 100)
-  }
-
-  exchangeInvoiceDiscount.value = { mode, value: safeValue }
-}
-
-function nextStep() {
-  if (currentStep.value === 1) {
-    if (returnedItems.value.length === 0) {
-      alert('Please select at least one item to return.')
-      return
-    }
-  } else if (currentStep.value === 2) {
-    if (exchangedItems.value.length === 0) {
-      alert('Please select at least one item for exchange.')
-      return
-    }
-    // Recalculate on step 3
-    calculation.value = calculateExchangeDifference(returnedItems.value, exchangedItems.value)
-    validation.value = validateExchange(props.originalSale, returnedItems.value, exchangedItems.value, productsStore)
-    if (!validation.value.valid) {
-      alert(`Validation errors:\n${validation.value.errors.join('\n')}`)
-      return
-    }
-  } else if (currentStep.value === 3) {
-    if (!validation.value?.valid) {
-      alert(`Please fix validation errors before proceeding.`)
-      return
-    }
-  }
-  
-  if (currentStep.value < totalSteps) {
-    currentStep.value++
-  }
-}
-
-function prevStep() {
-  if (currentStep.value > 1) {
-    currentStep.value--
-  }
-}
-
-function handleConfirm() {
-  if (!validation.value?.valid) {
-    alert('Please fix validation errors before confirming.')
-    return
-  }
-  
-  isProcessing.value = true
-  emit('confirm', {
-    returnedItems: returnedItems.value,
-    exchangedItems: exchangedItems.value,
-    refundReason: refundReason.value.trim(),
-    refundMethod: refundMethod.value,
-    paymentType: paymentType.value,
-  })
-}
-
-function handleClose() {
-  currentStep.value = 1
-  returnQuantities.value.clear()
-  exchangeQuantities.value.clear()
-  exchangeItemDiscounts.value.clear()
-  exchangeInvoiceDiscount.value = { mode: 'flat', value: 0 }
-  calculation.value = null
-  validation.value = null
-  refundReason.value = ''
-  refundMethod.value = 'cash'
-  paymentType.value = 'cash'
-  isProcessing.value = false
-  emit('close')
-}
-
-watch(() => props.show, (show) => {
-  if (!show) {
-    handleClose()
-  }
-})
-</script>
-
 <template>
   <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div class="w-full max-w-4xl rounded-lg dark-panel">
@@ -718,4 +424,297 @@ watch(() => props.show, (show) => {
     </div>
   </div>
 </template>
+
+
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { useSalesStore, type Sale } from '@/store/sales'
+import { useProductsStore } from '@/store/products'
+import { useRefundsStore, type RefundItem } from '@/store/refunds'
+import { calculateExchangeDifference, validateExchange, type ExchangeCalculation } from '@/utils/exchangeProcessor'
+
+const props = defineProps<{
+  originalSale: Sale | null
+  show: boolean
+}>()
+
+const emit = defineEmits<{
+  close: []
+  confirm: [data: {
+    returnedItems: RefundItem[]
+    exchangedItems: RefundItem[]
+    refundReason: string
+    refundMethod: 'cash' | 'store_credit' | 'wallet'
+    paymentType: 'cash' | 'card' | 'mobile'
+  }]
+}>()
+
+const salesStore = useSalesStore()
+const productsStore = useProductsStore()
+const refundsStore = useRefundsStore()
+
+// Step tracking
+const currentStep = ref(1)
+const totalSteps = 5
+
+// Step 1: Select items to return
+const returnQuantities = ref<Map<number, number>>(new Map())
+
+// Step 2: Select items to exchange
+const exchangeQuantities = ref<Map<number, number>>(new Map())
+// Step 2: Discount for new items (per-item discounts)
+const exchangeItemDiscounts = ref<Map<number, { mode: 'flat' | 'percent'; value: number }>>(new Map())
+// Step 2: Global/invoice-level discount for new items
+const exchangeInvoiceDiscount = ref<{ mode: 'flat' | 'percent'; value: number }>({ mode: 'flat', value: 0 })
+
+// Step 3: Review calculation
+const calculation = ref<ExchangeCalculation | null>(null)
+const validation = ref<{ valid: boolean; errors: string[]; warnings: string[] } | null>(null)
+
+// Step 4: Payment/Refund selection
+const refundReason = ref('')
+const refundMethod = ref<'cash' | 'store_credit' | 'wallet'>('cash')
+const paymentType = ref<'cash' | 'card' | 'mobile'>('cash')
+
+// Step 5: Confirmation
+const isProcessing = ref(false)
+
+const refundableItems = computed(() => {
+  if (!props.originalSale) return []
+  const existingRefunds = refundsStore.refundsForSale(props.originalSale.id)
+  const refundedMap = new Map<number, number>()
+  
+  existingRefunds.forEach((refund) => {
+    refund.refundedItems.forEach((item) => {
+      refundedMap.set(item.id, (refundedMap.get(item.id) || 0) + item.quantity)
+    })
+  })
+
+  return props.originalSale.items.map((item) => {
+    const refundedQty = refundedMap.get(item.id) || 0
+    const remainingQty = Math.max(0, item.quantity - refundedQty)
+    return {
+      productId: item.id,
+      name: item.name,
+      purchasedQty: item.quantity,
+      refundedQty,
+      remainingQty,
+      originalUnitPrice: item.unitPrice,
+      unitPrice: item.lineTotal ? item.lineTotal / item.quantity : item.unitPrice,
+      lineTotal: item.lineTotal ?? (item.unitPrice * item.quantity),
+    }
+  })
+})
+
+const availableProducts = computed(() => {
+  return productsStore.products.filter((p) => (p.stock || 0) > 0)
+})
+
+const returnedItems = computed((): RefundItem[] => {
+  const items: RefundItem[] = []
+  returnQuantities.value.forEach((qty, productId) => {
+    if (qty <= 0) return
+    const item = refundableItems.value.find((it) => it.productId === productId)
+    if (!item) return
+    items.push({
+      id: productId,
+      name: item.name,
+      quantity: qty,
+      unitPrice: item.unitPrice,
+      lineTotal: item.unitPrice * qty,
+    })
+  })
+  return items
+})
+
+const exchangedItems = computed((): RefundItem[] => {
+  const items: RefundItem[] = []
+  const newItemsSubtotal = Array.from(exchangeQuantities.value.entries()).reduce((sum, [productId, qty]) => {
+    if (qty <= 0) return sum
+    const product = productsStore.products.find((p) => p.id === productId)
+    if (!product) return sum
+    return sum + product.price * qty
+  }, 0)
+
+  exchangeQuantities.value.forEach((qty, productId) => {
+    if (qty <= 0) return
+    const product = productsStore.products.find((p) => p.id === productId)
+    if (!product) return
+
+    // Calculate per-item discount
+    const discount = exchangeItemDiscounts.value.get(productId) || { mode: 'flat', value: 0 }
+    const grossLineTotal = product.price * qty
+    let itemDiscount = 0
+    if (discount.mode === 'percent') {
+      itemDiscount = (grossLineTotal * Math.min(discount.value, 100)) / 100
+    } else {
+      itemDiscount = Math.min(discount.value, grossLineTotal)
+    }
+    const afterItemDiscount = Math.max(0, grossLineTotal - itemDiscount)
+
+    // Calculate proportional invoice-level discount
+    let invoiceDiscount = 0
+    if (newItemsSubtotal > 0 && (exchangeInvoiceDiscount.value.mode || exchangeInvoiceDiscount.value.value > 0)) {
+      const proportion = grossLineTotal / newItemsSubtotal
+      if (exchangeInvoiceDiscount.value.mode === 'percent') {
+        invoiceDiscount = (afterItemDiscount * Math.min(exchangeInvoiceDiscount.value.value, 100)) / 100
+      } else {
+        invoiceDiscount = (exchangeInvoiceDiscount.value.value * proportion)
+      }
+    }
+
+    const netLineTotal = Math.max(0, afterItemDiscount - invoiceDiscount)
+    const netUnitPrice = qty > 0 ? netLineTotal / qty : 0
+
+    items.push({
+      id: productId,
+      name: product.name,
+      quantity: qty,
+      unitPrice: netUnitPrice,
+      lineTotal: netLineTotal,
+    })
+  })
+  return items
+})
+
+// Watch for changes to recalculate
+watch([returnQuantities, exchangeQuantities, exchangeItemDiscounts, exchangeInvoiceDiscount], () => {
+  if (returnedItems.value.length > 0 && exchangedItems.value.length > 0) {
+    calculation.value = calculateExchangeDifference(returnedItems.value, exchangedItems.value)
+    validation.value = validateExchange(props.originalSale, returnedItems.value, exchangedItems.value, productsStore)
+  } else {
+    calculation.value = null
+    validation.value = null
+  }
+}, { deep: true })
+
+function setReturnQuantity(productId: number, qty: number) {
+  const item = refundableItems.value.find((it) => it.productId === productId)
+  if (!item) return
+  const safeQty = Math.min(Math.max(qty, 0), item.remainingQty)
+  if (safeQty <= 0) {
+    returnQuantities.value.delete(productId)
+  } else {
+    returnQuantities.value.set(productId, safeQty)
+  }
+}
+
+function setExchangeQuantity(productId: number, qty: number) {
+  const product = productsStore.products.find((p) => p.id === productId)
+  if (!product) return
+  const safeQty = Math.min(Math.max(qty, 0), product.stock || 0)
+  if (safeQty <= 0) {
+    exchangeQuantities.value.delete(productId)
+    exchangeItemDiscounts.value.delete(productId)
+  } else {
+    exchangeQuantities.value.set(productId, safeQty)
+  }
+}
+
+function setExchangeItemDiscount(productId: number, mode: 'flat' | 'percent', value: number) {
+  const qty = exchangeQuantities.value.get(productId)
+  if (!qty || qty <= 0) return
+  
+  const product = productsStore.products.find((p) => p.id === productId)
+  if (!product) return
+
+  const grossLineTotal = product.price * qty
+  let safeValue = Math.max(value, 0)
+  
+  if (mode === 'percent') {
+    safeValue = Math.min(safeValue, 100)
+  } else {
+    safeValue = Math.min(safeValue, grossLineTotal)
+  }
+
+  if (safeValue <= 0) {
+    exchangeItemDiscounts.value.delete(productId)
+  } else {
+    exchangeItemDiscounts.value.set(productId, { mode, value: safeValue })
+  }
+}
+
+function setExchangeInvoiceDiscount(mode: 'flat' | 'percent', value: number) {
+  let safeValue = Math.max(value, 0)
+  
+  if (mode === 'percent') {
+    safeValue = Math.min(safeValue, 100)
+  }
+
+  exchangeInvoiceDiscount.value = { mode, value: safeValue }
+}
+
+function nextStep() {
+  if (currentStep.value === 1) {
+    if (returnedItems.value.length === 0) {
+      alert('Please select at least one item to return.')
+      return
+    }
+  } else if (currentStep.value === 2) {
+    if (exchangedItems.value.length === 0) {
+      alert('Please select at least one item for exchange.')
+      return
+    }
+    // Recalculate on step 3
+    calculation.value = calculateExchangeDifference(returnedItems.value, exchangedItems.value)
+    validation.value = validateExchange(props.originalSale, returnedItems.value, exchangedItems.value, productsStore)
+    if (!validation.value.valid) {
+      alert(`Validation errors:\n${validation.value.errors.join('\n')}`)
+      return
+    }
+  } else if (currentStep.value === 3) {
+    if (!validation.value?.valid) {
+      alert(`Please fix validation errors before proceeding.`)
+      return
+    }
+  }
+  
+  if (currentStep.value < totalSteps) {
+    currentStep.value++
+  }
+}
+
+function prevStep() {
+  if (currentStep.value > 1) {
+    currentStep.value--
+  }
+}
+
+function handleConfirm() {
+  if (!validation.value?.valid) {
+    alert('Please fix validation errors before confirming.')
+    return
+  }
+  
+  isProcessing.value = true
+  emit('confirm', {
+    returnedItems: returnedItems.value,
+    exchangedItems: exchangedItems.value,
+    refundReason: refundReason.value.trim(),
+    refundMethod: refundMethod.value,
+    paymentType: paymentType.value,
+  })
+}
+
+function handleClose() {
+  currentStep.value = 1
+  returnQuantities.value.clear()
+  exchangeQuantities.value.clear()
+  exchangeItemDiscounts.value.clear()
+  exchangeInvoiceDiscount.value = { mode: 'flat', value: 0 }
+  calculation.value = null
+  validation.value = null
+  refundReason.value = ''
+  refundMethod.value = 'cash'
+  paymentType.value = 'cash'
+  isProcessing.value = false
+  emit('close')
+}
+
+watch(() => props.show, (show) => {
+  if (!show) {
+    handleClose()
+  }
+})
+</script>
 

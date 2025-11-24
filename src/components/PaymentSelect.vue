@@ -1,126 +1,3 @@
-<script setup lang="ts">
-const model = defineModel<'cash' | 'card' | 'mobile'>({ required: true })
-const emit = defineEmits<{
-  (e: 'apply-amount', value: number): void
-  (e: 'open-resume'): void
-}>()
-
-// import { ref } from 'vue'
-
-import { ref, watch } from 'vue'
-
-const showCalc = ref(false)
-const display = ref('0')
-
-function inputDigit(d: string) {
-  if (display.value === '0') display.value = d
-  else display.value += d
-}
-
-function inputDot() {
-  if (!display.value.includes('.')) display.value += '.'
-}
-
-function clearAll() {
-  display.value = '0'
-}
-
-function backspace() {
-  if (display.value.length <= 1) display.value = '0'
-  else display.value = display.value.slice(0, -1)
-}
-
-function applyAmount() {
-  const n = Number(display.value || 0)
-  if (!Number.isFinite(n)) return
-  emit('apply-amount', n)
-  showCalc.value = false
-}
-
-function appendOperator(op: string) {
-  // allow +/-/*// symbols in display, but keep it simple: if last char is operator, replace it
-  const last = display.value.slice(-1)
-  if ('+-*/'.includes(last)) {
-    display.value = display.value.slice(0, -1) + op
-  } else {
-    display.value += op
-  }
-}
-
-function evalExpression() {
-  try {
-    // sanitize: allow digits, operators, dot, parentheses
-    const expr = display.value.replace(/[^0-9+\-*/().% ]/g, '')
-    // replace '%' with '/100' when used as percent of previous number (simple handling)
-    const normalized = expr.replace(/(\d+\.?\d*)%/g, '($1/100)')
-    // eslint-disable-next-line no-new-func
-    // Use Function to evaluate expression in local scope
-    const res = Function(`return (${normalized})`)()
-    if (Number.isFinite(res)) display.value = String(Number(res.toFixed(2)))
-  } catch (e) {
-    // ignore errors
-  }
-}
-
-function evalAndApply() {
-  evalExpression()
-  applyAmount()
-}
-
-function onKeyDown(e: KeyboardEvent) {
-  if (!showCalc.value) return
-  const k = e.key
-  if (/^[0-9]$/.test(k)) {
-    e.preventDefault()
-    inputDigit(k)
-    return
-  }
-  if (k === '.') {
-    e.preventDefault()
-    inputDot()
-    return
-  }
-  if (k === 'Enter' || k === '=') {
-    e.preventDefault()
-    // evaluate only; do not apply or close the calculator
-    evalExpression()
-    return
-  }
-  if (k === 'Backspace') {
-    e.preventDefault()
-    backspace()
-    return
-  }
-  if (k === 'Escape') {
-    e.preventDefault()
-    showCalc.value = false
-    return
-  }
-  if (k === '+' || k === '-' || k === '*' || k === '/') {
-    e.preventDefault()
-    appendOperator(k)
-    return
-  }
-  if (k === '%') {
-    e.preventDefault()
-    appendOperator('%')
-    return
-  }
-  if (k.toLowerCase() === 'c') {
-    e.preventDefault()
-    clearAll()
-    return
-  }
-}
-
-watch(showCalc, (v) => {
-  if (v) window.addEventListener('keydown', onKeyDown)
-  else window.removeEventListener('keydown', onKeyDown)
-})
-
-// Scan toggle moved to Settings; kept intentionally empty here.
-</script>
-
 <template>
   <div class="space-y-2">
     <div class="payment-label text-sm font-medium">Payment Type</div>
@@ -212,6 +89,120 @@ watch(showCalc, (v) => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+const model = defineModel<'cash' | 'card' | 'mobile'>({ required: true })
+const emit = defineEmits<{
+  (e: 'apply-amount', value: number): void
+  (e: 'open-resume'): void
+}>()
+
+import { ref, watch } from 'vue'
+
+const showCalc = ref(false)
+const display = ref('0')
+
+function inputDigit(d: string) {
+  if (display.value === '0') display.value = d
+  else display.value += d
+}
+
+function inputDot() {
+  if (!display.value.includes('.')) display.value += '.'
+}
+
+function clearAll() {
+  display.value = '0'
+}
+
+function backspace() {
+  if (display.value.length <= 1) display.value = '0'
+  else display.value = display.value.slice(0, -1)
+}
+
+function applyAmount() {
+  const n = Number(display.value || 0)
+  if (!Number.isFinite(n)) return
+  emit('apply-amount', n)
+  showCalc.value = false
+}
+
+function appendOperator(op: string) {
+  const last = display.value.slice(-1)
+  if ('+-*/'.includes(last)) {
+    display.value = display.value.slice(0, -1) + op
+  } else {
+    display.value += op
+  }
+}
+
+function evalExpression() {
+  try {
+    const expr = display.value.replace(/[^0-9+\-*/().% ]/g, '')
+    const normalized = expr.replace(/(\d+\.?\d*)%/g, '($1/100)')
+    const res = Function(`return (${normalized})`)()
+    if (Number.isFinite(res)) display.value = String(Number(res.toFixed(2)))
+  } catch (e) {
+
+  }
+}
+
+function evalAndApply() {
+  evalExpression()
+  applyAmount()
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  if (!showCalc.value) return
+  const k = e.key
+  if (/^[0-9]$/.test(k)) {
+    e.preventDefault()
+    inputDigit(k)
+    return
+  }
+  if (k === '.') {
+    e.preventDefault()
+    inputDot()
+    return
+  }
+  if (k === 'Enter' || k === '=') {
+    e.preventDefault()
+    evalExpression()
+    return
+  }
+  if (k === 'Backspace') {
+    e.preventDefault()
+    backspace()
+    return
+  }
+  if (k === 'Escape') {
+    e.preventDefault()
+    showCalc.value = false
+    return
+  }
+  if (k === '+' || k === '-' || k === '*' || k === '/') {
+    e.preventDefault()
+    appendOperator(k)
+    return
+  }
+  if (k === '%') {
+    e.preventDefault()
+    appendOperator('%')
+    return
+  }
+  if (k.toLowerCase() === 'c') {
+    e.preventDefault()
+    clearAll()
+    return
+  }
+}
+
+watch(showCalc, (v) => {
+  if (v) window.addEventListener('keydown', onKeyDown)
+  else window.removeEventListener('keydown', onKeyDown)
+})
+
+</script>
 
 <style scoped>
 .calculator-key:focus { outline: none; }
