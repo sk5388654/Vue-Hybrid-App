@@ -7,6 +7,11 @@ Only layout/UX changes added; business logic untouched.
 -->
 
 <script setup lang="ts">
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faGear } from '@fortawesome/free-solid-svg-icons'
+library.add(faGear)
+
 import { computed, ref, onMounted } from 'vue'
 import { useSidebarToggle } from '@/composables/useSidebarToggle'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
@@ -58,28 +63,7 @@ const { sidebarOpen, openSidebar, closeSidebar, toggleSidebar } = useSidebarTogg
 // collapsed UI helpers
 const showStoreMenu = ref(false)
 
-// Theme toggle state for Sidebar (keeps toggle local to the sidebar)
-const isDarkMode = ref(false)
-
-function toggleTheme() {
-  isDarkMode.value = !isDarkMode.value
-  document.documentElement.classList.toggle('dark', isDarkMode.value)
-  if (isDarkMode.value) {
-    localStorage.setItem('theme', 'dark')
-  } else {
-    localStorage.removeItem('theme')
-  }
-}
-
 onMounted(() => {
-  const saved = localStorage.getItem('theme')
-  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    isDarkMode.value = true
-    document.documentElement.classList.add('dark')
-  } else {
-    isDarkMode.value = false
-    document.documentElement.classList.remove('dark')
-  }
   // restore collapsed state for sidebar; default to collapsed
   const collapsed = localStorage.getItem('sidebarCollapsed')
   if (collapsed === '0') {
@@ -113,6 +97,7 @@ const navItems = computed(() => {
     { label: 'Closing Voucher', to: '/closing', icon: 'M5 5h14v14H5z M8 9h8M8 13h8M8 17h5', show: canManage },
     { label: 'Reports', to: '/reports', icon: 'M5 13l4 4L19 7', show: true },
     { label: 'Sales History', to: '/sales-history', icon: 'M4 6h16M4 12h10M4 18h6', show: true },
+    { label: 'Settings', to: '/settings', icon: 'gear', iconIsFa: true, show: true },
   ].filter((item) => item.show)
 })
 
@@ -181,16 +166,7 @@ onMounted(() => {
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- Theme toggle: show icon on md (compact) and icon+label on lg -->
-          <button
-            class="hidden md:inline-flex items-center gap-2 sidebar-toggle"
-            @click="toggleTheme"
-            :title="isDarkMode ? 'Switch to light' : 'Switch to dark'"
-            aria-label="Toggle theme"
-          >
-            <svg class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="hidden lg:inline text-sm">{{ isDarkMode ? 'Dark' : 'Light' }}</span>
-          </button>
+          <!-- Theme toggle moved to Settings -->
         </div>
       </div>
 
@@ -238,9 +214,14 @@ onMounted(() => {
           'md:justify-center md:px-0 md:py-2 lg:justify-start lg:px-3 lg:py-3'
         ]"
       >
-        <svg class="h-5 w-5 flex-shrink-0 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-          <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <template v-if="item.iconIsFa">
+          <FontAwesomeIcon :icon="['fas', item.icon]" class="h-5 w-5 flex-shrink-0 text-black" />
+        </template>
+        <template v-else>
+          <svg class="h-5 w-5 flex-shrink-0 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+            <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </template>
         <span class="ml-2 hidden lg:inline">{{ item.label }}</span>
       </RouterLink>
     </nav>
@@ -287,10 +268,7 @@ onMounted(() => {
               <div class="text-lg font-semibold">Shop Suite</div>
             </div>
             <div class="flex items-center gap-2">
-              <!-- Theme toggle in mobile header -->
-              <button class="p-2 sidebar-toggle" @click="toggleTheme" :title="isDarkMode ? 'Switch to light' : 'Switch to dark'" aria-label="Toggle theme">
-                <svg class="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+              <!-- Theme toggle moved to Settings -->
               <button class="p-2" @click="closeSidebar" aria-label="Close menu">✕</button>
             </div>
           </div>

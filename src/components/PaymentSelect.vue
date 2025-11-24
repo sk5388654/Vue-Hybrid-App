@@ -3,7 +3,6 @@ const model = defineModel<'cash' | 'card' | 'mobile'>({ required: true })
 const emit = defineEmits<{
   (e: 'apply-amount', value: number): void
   (e: 'open-resume'): void
-  (e: 'toggle-scan', enabled: boolean): void
 }>()
 
 // import { ref } from 'vue'
@@ -11,7 +10,6 @@ const emit = defineEmits<{
 import { ref, watch } from 'vue'
 
 const showCalc = ref(false)
-const scanMode = ref(false)
 const display = ref('0')
 
 function inputDigit(d: string) {
@@ -120,10 +118,7 @@ watch(showCalc, (v) => {
   else window.removeEventListener('keydown', onKeyDown)
 })
 
-function toggleScan() {
-  scanMode.value = !scanMode.value
-  emit('toggle-scan', scanMode.value)
-}
+// Scan toggle moved to Settings; kept intentionally empty here.
 </script>
 
 <template>
@@ -170,17 +165,7 @@ function toggleScan() {
         Resume Sale
       </button>
 
-      <!-- Scan Mode Toggle -->
-      <button
-        @click="toggleScan"
-        :class="scanMode ? 'ml-2 inline-flex items-center gap-2 rounded-md border border-green-600 bg-green-600/20 px-3 py-1 text-sm text-green-400 shadow-sm' : 'ml-2 inline-flex items-center gap-2 rounded-md border border-transparent dark-panel px-3 py-1 text-sm payment-btn shadow-sm hover:shadow-md'"
-        :title="scanMode ? 'Disable Scan Mode' : 'Enable Scan Mode'"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
-        </svg>
-        <span class="text-sm">{{ scanMode ? 'Scan: ON' : 'Scan: OFF' }}</span>
-      </button>
+      <!-- Scan Mode moved to Settings page -->
     </div>
 
     <!-- Calculator Modal -->

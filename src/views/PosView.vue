@@ -73,11 +73,10 @@
               v-model="paymentType"
               @apply-amount="(val) => { amountPaid = val; isCreditSale = true }"
               @open-resume="() => { loadSuspended(); showResumeModal = true }"
-              @toggle-scan="onToggleScan"
             />
 
             <!-- Scan Mode indicator / toast -->
-            <div v-if="scanMode" class="mt-2 flex items-center gap-2">
+              <div v-if="settings.scanEnabled" class="mt-2 flex items-center gap-2">
               <div class="rounded bg-green-900 px-2 py-1 text-sm font-medium text-green-300">Scan Mode: ON</div>
             </div>
             <div v-if="showScanToast" class="mt-2 text-sm text-white bg-green-700 rounded px-2 py-1">Scan Mode Activated</div>
@@ -256,6 +255,7 @@ import { useSidebarToggle } from '@/composables/useSidebarToggle'
 import ReceiptModal from '@/components/ReceiptModal.vue'
 import InvoiceModal from '@/components/InvoiceModal.vue'
 import PaymentSelect from '@/components/PaymentSelect.vue'
+import { useSettingsStore } from '@/store/settings'
 
 type CartItemRaw = {
   id: number
@@ -374,7 +374,7 @@ type SuspendedSale = {
 
 const suspendedSales = ref<SuspendedSale[]>([])
 const showResumeModal = ref(false)
-const scanMode = ref(false)
+const settings = useSettingsStore()
 const showScanToast = ref(false)
 const scanBuffer = ref('')
 const scanInput = ref<HTMLInputElement | null>(null)
@@ -508,14 +508,12 @@ function onScanSubmit() {
   if (value) processBarcode(value)
   scanBuffer.value = ''
   // keep focus when scan mode is enabled
-  if (scanMode.value && scanInput.value) {
+  if (settings.scanEnabled && scanInput.value) {
     setTimeout(() => scanInput.value && scanInput.value.focus(), 20)
   }
 }
 
-function onToggleScan(enabled: boolean) {
-  scanMode.value = !!enabled
-}
+// scan toggle now lives in settings store
 
 function deleteSuspended(id: string) {
   const idx = suspendedSales.value.findIndex(s => s.id === id)
@@ -690,18 +688,20 @@ watch(isCreditSale, (enabled) => {
   }
 })
 
-watch(scanMode, (v) => {
-  if (v) {
-    showScanToast.value = true
-    // focus the hidden input shortly after toggle
-    setTimeout(() => {
-      if (scanInput.value) scanInput.value.focus()
-    }, 50)
-    setTimeout(() => (showScanToast.value = false), 1600)
-  } else {
-    if (scanInput.value) scanInput.value.blur()
+watch(
+  () => settings.scanEnabled,
+  (v) => {
+    if (v) {
+      showScanToast.value = true
+      setTimeout(() => {
+        if (scanInput.value) scanInput.value.focus()
+      }, 50)
+      setTimeout(() => (showScanToast.value = false), 1600)
+    } else {
+      if (scanInput.value) scanInput.value.blur()
+    }
   }
-})
+)
 
 watch(grandTotal, (newTotal) => {
   if (isCreditSale.value && amountPaid.value > newTotal) {
@@ -723,6 +723,7 @@ onMounted(() => {
   salesStore.load()
   customersStore.load()
   closingStore.setCurrentStore()
+  try { settings.load() } catch {}
 
   const persistedCart = localStorage.getItem(CART_KEY)
   if (persistedCart) {

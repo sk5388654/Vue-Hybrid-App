@@ -14,6 +14,8 @@ const ClosingVoucher = () => import('@/components/ClosingVoucher.vue')
 const PrintClosingVoucher = () => import('@/views/PrintClosingVoucher.vue')
 const LoginView = () => import('@/views/LoginView.vue')
 const RefundManager = () => import('@/components/RefundManager.vue')
+const SettingsView = () => import('@/views/SettingsView.vue')
+const BranchesView = () => import('@/views/BranchesView.vue')
 
 const routes = [
   { path: '/', redirect: '/pos' },
@@ -30,6 +32,8 @@ const routes = [
   { path: '/reports', component: SalesReport, meta: { requiresAuth: true } },
   { path: '/reports/employees', component: EmployeeDashboard, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/sales-history', component: SalesHistory, meta: { requiresAuth: true } },
+  { path: '/branches', component: BranchesView, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/settings', component: SettingsView, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
