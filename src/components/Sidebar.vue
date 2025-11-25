@@ -2,14 +2,17 @@
 
 <template>
   <aside
-    class="hidden md:flex md:flex-col sticky top-0 h-screen px-4 py-6 backdrop-blur transition-all duration-300 dark-sidebar md:w-20 lg:w-72"
+    :class="[
+      'hidden md:flex md:flex-col sticky top-0 h-screen px-4 py-6 backdrop-blur transition-all duration-300 dark-sidebar',
+      sidebarWidthClass
+    ]"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
       <div class="flex items-center justify-between gap-2 px-2">
         <div class="flex items-center gap-2">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">POS</span>
-          <div class="text-lg font-semibold hidden lg:block">Shop Suite</div>
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100" title="Shop Suite">POS</span>
+          <div v-if="!(isCollapsed && !isHovered)" class="text-lg font-semibold hidden lg:block">Shop Suite</div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -20,7 +23,8 @@
         <div class="subtle-label hidden lg:block">Store</div>
 
         <!-- full store selector only on large screens -->
-        <div class="hidden lg:block">
+        <!-- full store selector: hidden when collapsed (even on lg) -->
+        <div v-if="!(isCollapsed && !isHovered)" class="hidden lg:block">
           <select
             v-model="currentStoreId"
             :disabled="!isAdmin"
@@ -34,21 +38,20 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-center md:flex lg:hidden">
+        <!-- compact store button shown only when sidebar is collapsed -->
+        <div v-if="isCollapsed && !isHovered" class="flex items-center justify-center">
           <button
-            class="sidebar-toggle"
-            disabled
-            aria-disabled="true"
-            title="Store selection disabled in compact mode"
-            aria-label="Select store (disabled)"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100"
+            title="Current store"
+            aria-label="Current store"
           >
-            <span class="font-semibold text-sm">{{ (stores.find(s => s.id === currentStoreId) || { name: 'S' }).name.charAt(0) }}</span>
+            {{ (stores.find(s => s.id === currentStoreId) || { name: 'S' }).name.charAt(0) }}
           </button>
         </div>
       </div>
 
     <nav class="mt-6 flex-1 space-y-1">
-      <RouterLink
+        <RouterLink
         v-for="item in navItems"
         :key="item.to"
         :to="item.to"
@@ -67,34 +70,35 @@
             <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </template>
-        <span class="ml-2 hidden lg:inline">{{ item.label }}</span>
+        <span :class="['ml-2', (isCollapsed && !isHovered) ? 'hidden' : 'hidden lg:inline']">{{ item.label }}</span>
       </RouterLink>
     </nav>
 
-    <div class="mt-auto rounded-2xl p-3 dark-panel transparent-panel text-sm">
-      <div class="hidden lg:block">
-        <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
-        <div class="font-semibold">{{ auth.user?.displayName }}</div>
-        <button
-          class="mt-3 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-300 hover:bg-[rgba(255,255,255,0.02)]"
-          @click="$router.push('/login'); auth.logout()"
-        >
-          Logout
-        </button>
+      <div class="mt-auto rounded-2xl p-3 dark-panel transparent-panel text-sm">
+        <!-- full signed-in panel (hidden when collapsed) -->
+        <div v-if="!(isCollapsed && !isHovered)" class="hidden lg:block">
+          <div class="text-xs uppercase tracking-wide subtle-label">Signed in</div>
+          <div class="font-semibold">{{ auth.user?.displayName }}</div>
+          <button
+            class="mt-3 w-full rounded-2xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-300 hover:bg-[rgba(255,255,255,0.02)]"
+            @click="$router.push('/login'); auth.logout()"
+          >
+            Logout
+          </button>
+        </div>
+
+        <!-- compact bottom controls for collapsed sidebar -->
+        <div v-if="isCollapsed && !isHovered" class="flex flex-col items-center gap-2 py-2">
+          <div class="inline-flex flex-col items-center gap-2">
+            <div class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-slate-100">{{ auth.user?.displayName ? auth.user.displayName.charAt(0) : 'U' }}</div>
+            <button class="p-2 rounded-md text-slate-600 hover:bg-[rgba(0,0,0,0.04)]" @click="$router.push('/login'); auth.logout(); closeSidebar()" aria-label="Logout" title="Logout">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="flex items-center justify-center md:flex lg:hidden">
-        <button
-          class="sidebar-toggle"
-          @click="$router.push('/login'); auth.logout(); closeSidebar()"
-          aria-label="Logout"
-          title="Logout"
-        >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7" />
-          </svg>
-        </button>
-      </div>
-    </div>
 
     <teleport to="body">
       <div v-show="sidebarOpen" class="fixed inset-0 z-50 md:hidden">
@@ -199,6 +203,23 @@ const newStorePassword = ref('')
 // keep local collapse state for persisted behavior but responsive classes drive layout
 const isCollapsed = ref(true)
 const isHovered = ref(false)
+
+// compute width classes based on collapsed state and hover
+const sidebarWidthClass = computed(() => {
+  // If collapsed and not hovered -> stay narrow on md+ (md:w-20)
+  if (isCollapsed.value && !isHovered.value) {
+    // keep narrow on md and lg
+    return 'md:w-20 lg:w-20'
+  }
+
+  // If collapsed but hovered -> temporarily expand to full width
+  if (isCollapsed.value && isHovered.value) {
+    return 'md:w-72 lg:w-72'
+  }
+
+  // Not collapsed -> default behavior: narrow on md, wide on lg
+  return 'md:w-20 lg:w-72'
+})
 
 // composable to manage mobile sidebar state and keyboard (Esc) handling
 const { sidebarOpen, openSidebar, closeSidebar, toggleSidebar } = useSidebarToggle()
