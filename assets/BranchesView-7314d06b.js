@@ -1,0 +1,1 @@
+import{d as t,o as s,a as n,b as a}from"./index-584bf46f.js";const o={class:"p-4 max-w-4xl mx-auto"},m=t({__name:"BranchesView",setup(r){return(c,e)=>(s(),n("div",o,[...e[0]||(e[0]=[a("h1",{class:"text-2xl font-semibold mb-4"},"Branches",-1),a("p",{class:"text-sm text-slate-500"},"Branch management placeholder. Add branch CRUD here.",-1)])]))}});export{m as default};
