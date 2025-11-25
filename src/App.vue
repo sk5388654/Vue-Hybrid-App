@@ -2,7 +2,7 @@
 import { onMounted, watch, computed, ref } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
-import InstallPWA from '@/components/InstallPWA.vue'
+// import InstallPWA from '@/components/InstallPWA.vue'
 import { useSidebarToggle } from '@/composables/useSidebarToggle'
 import { useAuthStore } from '@/store/auth'
 import { useProductsStore } from '@/store/products'
@@ -50,7 +50,6 @@ watch(
 
 <template>
   <div class="app-shell">
-    <InstallPWA />
     <div v-if="route.path === '/login'">
       <main class="mx-auto max-w-7xl px-4 py-6">
         <RouterView />
