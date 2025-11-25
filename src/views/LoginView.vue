@@ -18,6 +18,12 @@ function submit() {
     error.value = 'Invalid credentials'
   }
 }
+
+function handleKeypress(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    submit()
+  }
+}
 </script>
 
 <template>
@@ -26,12 +32,12 @@ function submit() {
       <h1 class="mb-4 text-lg font-semibold text-gray-900">Sign in</h1>
       <div class="space-y-3">
         <div>
-          <label class="block text-sm text-gray-700">Username</label>
-          <input v-model="username" type="text" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+          <label class="block text-sm text-gray-700">Username <span class="text-red-600">*</span></label>
+          <input v-model="username" type="text" @keyup="handleKeypress" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
         </div>
         <div>
-          <label class="block text-sm text-gray-700">Password</label>
-          <input v-model="password" type="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+          <label class="block text-sm text-gray-700">Password <span class="text-red-600">*</span></label>
+          <input v-model="password" type="password" @keyup="handleKeypress" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
         </div>
         <div v-if="error" class="text-sm text-red-600">{{ error }}</div>
         <button @click="submit" class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Sign in</button>

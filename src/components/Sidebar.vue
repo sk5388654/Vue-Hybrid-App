@@ -150,6 +150,34 @@
         </aside>
       </div>
     </teleport>
+    <!-- Add Store Modal -->
+    <teleport to="body">
+      <div v-if="showAdd" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40" @click="hideAdd" aria-hidden="true"></div>
+        <div class="relative z-50 w-full max-w-md rounded-lg dark-panel p-4 shadow-lg">
+          <h3 class="text-lg font-semibold mb-3">Add Store</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs font-medium">Store name <span class="text-red-600">*</span></label>
+              <input v-model="newStoreName" @keyup.enter="saveNewStore" class="mt-1 w-full rounded input-field" placeholder="My Store" />
+            </div>
+            <div>
+              <label class="text-xs font-medium">Admin username <span class="text-red-600">*</span></label>
+              <input v-model="newStoreUsername" @keyup.enter="saveNewStore" class="mt-1 w-full rounded input-field" placeholder="admin" />
+            </div>
+            <div>
+              <label class="text-xs font-medium">Admin password <span class="text-red-600">*</span></label>
+              <input v-model="newStorePassword" type="password" @keyup.enter="saveNewStore" class="mt-1 w-full rounded input-field" placeholder="••••••" />
+            </div>
+          </div>
+          <div class="mt-4 flex justify-end gap-2">
+            <button class="btn-ghost px-3 py-1" @click="hideAdd">Cancel</button>
+            <button class="btn-primary px-3 py-1" @click="saveNewStore">Save</button>
+          </div>
+          <div v-if="showSuccess" class="mt-3 text-sm" :class="successMessage.includes('Error') ? 'text-red-600' : 'text-emerald-600'">{{ successMessage }}</div>
+        </div>
+      </div>
+    </teleport>
   </aside>
 </template>
 
@@ -272,6 +300,53 @@ function deleteStore() {
   }
   products.load()
   salesStore.load()
+}
+
+function hideAdd() {
+  showAdd.value = false
+  newStoreName.value = ''
+  newStoreUsername.value = ''
+  newStorePassword.value = ''
+}
+
+function saveNewStore() {
+  const name = (newStoreName.value || '').trim()
+  const username = (newStoreUsername.value || '').trim()
+  const password = (newStorePassword.value || '').trim()
+
+  if (!name) {
+    showSuccess.value = true
+    successMessage.value = 'Error: Store name is required'
+    window.setTimeout(() => (showSuccess.value = false), 1800)
+    return
+  }
+
+  if (!username) {
+    showSuccess.value = true
+    successMessage.value = 'Error: Admin username is required'
+    window.setTimeout(() => (showSuccess.value = false), 1800)
+    return
+  }
+
+  if (!password) {
+    showSuccess.value = true
+    successMessage.value = 'Error: Admin password is required'
+    window.setTimeout(() => (showSuccess.value = false), 1800)
+    return
+  }
+
+  const creds = { username, password }
+  const id = storesStore.addStore(name, creds, auth.user?.username)
+  // select newly created store if nothing selected yet
+  if (!storesStore.currentStoreId) storesStore.setCurrentStore(id)
+
+  showSuccess.value = true
+  successMessage.value = 'Store added successfully'
+  // Show message for 2 seconds, then close modal
+  window.setTimeout(() => {
+    showSuccess.value = false
+    hideAdd()
+  }, 2000)
 }
 
 onMounted(() => {
